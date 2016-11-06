@@ -1,4 +1,4 @@
-# dnspython hook for deyhdrated
+# dnspython hook for dehydrated
 
 This repository contains a python hook for the `dehydrated.sh` project, a Let's Encrypt/ACME client implemented as a shell script. This hook uses the dnspython API to perform dynamic DNS updates and queries to verify. The DNS challenge is outlined in the [ACME protocol](https://letsencrypt.github.io/acme-spec/#rfc.section.7.4). To successfully complete this challenge, the client creates a temporary TXT record containing a secret token for the given domain name, thereby proving ownership of the domain. 
 
