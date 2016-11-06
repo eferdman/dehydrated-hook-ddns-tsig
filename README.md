@@ -11,8 +11,8 @@ Download the files for installation
 
 ``` sh
   $ git clone https://github.com/lukas2511/dehydrated.git
-  $ mkdir dehydrated/hooks
-  $ git clone https://github.com/eferdman/dnspython-hook.git dehydrated/hooks/
+  $ mkdir -p dehydrated/hooks/dnspython
+  $ git clone https://github.com/eferdman/dnspython-hook.git dehydrated/hooks/dnspython
 ```
 ## Configuration
 The script reads the name of the key file from the environmental variable `DDNS_HOOK_KEY_FILE`
@@ -28,7 +28,7 @@ See the [dehydrated script](https://github.com/lukas2511/dehydrated) for more op
 
 ``` bash
 $ cd dehydrated
-$ ./dehydrated -c --challenge dns-01 --domain myblog.com --hook ./hooks/dnspython-hook.py
+$ ./dehydrated -c --challenge dns-01 --domain myblog.com --hook ./hooks/dnspython/dnspython-hook.py
 ```
 
 Or to test the script directly:
