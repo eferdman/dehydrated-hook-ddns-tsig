@@ -32,7 +32,6 @@ import dns.tsigkeyring
 import dns.update
 import dns.query
 from dns.exception import DNSException
-import iscpy
 
 # Configure some basic logging
 logger = logging.getLogger(__name__)
@@ -46,6 +45,7 @@ name_server_ip = '10.0.0.1'
 keyalgorithm = dns.tsig.HMAC_MD5
 
 def get_key():
+    import iscpy
     key_dict = {}
     key_file = os.environ.get('DDNS_HOOK_KEY_FILE')
 
