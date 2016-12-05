@@ -57,9 +57,7 @@ name_server_ip = '10.0.0.1'
 keyalgorithm = dns.tsig.HMAC_MD5
 
 
-def get_key():
-    import iscpy
-    key_dict = {}
+def get_isc_key():
     try:
         import iscpy
     except ImportError:
@@ -87,10 +85,9 @@ def get_key():
 
     # Grab the secret key
     secret = parsed_key_file.values()[0]['secret'].strip('\"')
-    key_dict[key_name] = secret
     f.close()
 
-    return key_dict
+    return (key_name, secret)
 
 
 
@@ -170,14 +167,91 @@ def delete_txt_record(domain_name, token):
         else:
             logger.info(" + TXT record successfully deleted.")
 
-def read_config():
-    import argparse
+# callback to show the challenge via DNS
+def deploy_challenge(cfg):
+    ensure_config_dns(cfg)
+    for c in cfg:
+        print("%s: %s" % (c, cfg[c]))
+    print("===")
+
+
+# callback to clean the challenge from DNS
+def clean_challenge(cfg):
+    print(cfg)
+
+
+# callback to deploy the obtained certificate
+# (currently unimplemented)
+def deploy_cert(cfg):
+    pass
+
+
+# callback when the certificate has not changed
+# (currently unimplemented)
+def unchanged_cert(cfg):
+    pass
+
+def ensure_config_dns(cfg):
+    """make sure that the configuration can be used to update the DNS
+(e.g. read rndc-key if missing; fix some values if present)
+"""
+    # (str)key_name, (str)key_secret, (str)name_server_ip, (int)ttl, (float)wait
+
+    try:
+        key_name = cfg["config"]["key_name"]
+        key_secret = cfg["config"]["key_secret"]
+    except KeyError:
+        (key_name, key_secret) = get_isc_key()
+
+    keyringd={key_name: key_secret}
+    keyring = dns.tsigkeyring.from_text(keyringd)
+    cfg["config"]["keyring"] = keyring
+
+
+    if "ttl" in cfg["config"]:
+        cfg["config"]["ttl"] = int(float(cfg["config"]["ttl"]))
+    if "wait" in cfg["config"]:
+        cfg["config"]["wait"] = float(cfg["config"]["wait"])
+
+
+def read_config(args):
     try:
         import configparser
     except ImportError:
         import ConfigParser as configparser
 
-    configfile="dnspython.conf"
+    cfgfile = configfile
+    if args.config:
+        cfgfile = args.config
+
+    config = configparser.ConfigParser()
+    config.read(cfgfile)
+
+    domain = args.domain[0]
+    if domain in config:
+        config = config[domain]
+    else:
+        config = config.defaults()
+
+    result = dict()
+
+    d = dict()
+    for c in config:
+        d[c]=config[c]
+    result["config"] = d
+
+    d = dict()
+    args = vars(args)
+    for c in args:
+        if type(args[c]) is list:
+            d[c]=args[c][0]
+    result["args"] = d
+
+    return result
+
+def parse_args():
+    import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c", "--config",
@@ -266,17 +340,8 @@ def read_config():
         help="certificate chain")
 
     args = parser.parse_args()
-    if args.config:
-        configfile = args.config
-
-    config = configparser.ConfigParser()
-    config.read(configfile)
-
-    return config
-
-keyring = dns.tsigkeyring.from_text(get_key())
-
-
+    cfg = read_config(args)
+    return (args.func, cfg)
 
 
 def main(hook_stage, domain_name, token):
