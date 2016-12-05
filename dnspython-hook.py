@@ -93,6 +93,83 @@ def get_key():
     return key_dict
 
 
+
+# Create a TXT record through the dnspython API
+# Example code at
+#  https://github.com/rthalley/dnspython/blob/master/examples/ddns.py
+def create_txt_record(domain_name, token):
+
+    logger.info(' + Creating TXT record "%s" for the domain _acme-challenge.%s'
+                % (token, domain_name))
+    update = dns.update.Update(
+        domain_name,
+        keyring=keyring,
+        keyalgorithm=keyalgorithm)
+    update.add('_acme-challenge', 300, 'TXT', token)
+
+    # Attempt to add a TXT record
+    try:
+        response = dns.query.udp(update, name_server_ip, timeout=10)
+    except DNSException as err:
+        logger.error(err)
+
+    # Wait for DNS record to propagate
+    time.sleep(5)
+
+    # Check if the TXT record was inserted
+    try:
+        answers = dns.resolver.query('_acme-challenge.' + domain_name, 'TXT')
+    except DNSException as err:
+        logger.error(err)
+        sys.exit(1)
+    else:
+        txt_records = [txt_record.strings[0] for txt_record in answers]
+        if token in txt_records:
+            logger.info(" + TXT record successfully added!")
+        else:
+            logger.info(" + TXT record not added.")
+            sys.exit(1)
+
+
+# Delete the TXT record using the dnspython API
+def delete_txt_record(domain_name, token):
+    logger.info(' + Deleting TXT record "%s" for the domain _acme-challenge.%s'
+                % (token, domain_name))
+
+    # Retrieve the specific TXT record
+    txt_record = dns.rdata.from_text(
+        dns.rdataclass.IN,
+        dns.rdatatype.TXT,
+        token)
+
+    # Attempt to delete the TXT record
+    update = dns.update.Update(
+        domain_name,
+        keyring=keyring,
+        keyalgorithm=keyalgorithm)
+    update.delete('_acme-challenge', txt_record)
+    try:
+        reponse = dns.query.udp(update, name_server_ip, timeout=10)
+    except DNSException as err:
+        logger.error(err)
+
+    # Wait for DNS record to propagate
+    time.sleep(5)
+
+    # Check if the TXT record was successfully removed
+    try:
+        answers = dns.resolver.query('_acme-challenge.' + domain_name, 'TXT')
+    except DNSException as err:
+        logger.error(err)
+        sys.exit(1)
+    else:
+        txt_records = [txt_record.strings[0] for txt_record in answers]
+        if token in txt_records:
+            logger.info(" + TXT record not successfully deleted.")
+            sys.exit(1)
+        else:
+            logger.info(" + TXT record successfully deleted.")
+
 def read_config():
     import argparse
     try:
@@ -200,81 +277,6 @@ def read_config():
 keyring = dns.tsigkeyring.from_text(get_key())
 
 
-# Create a TXT record through the dnspython API
-# Example code at
-#  https://github.com/rthalley/dnspython/blob/master/examples/ddns.py
-def create_txt_record(domain_name, token):
-
-    logger.info(' + Creating TXT record "%s" for the domain _acme-challenge.%s'
-                % (token, domain_name))
-    update = dns.update.Update(
-        domain_name,
-        keyring=keyring,
-        keyalgorithm=keyalgorithm)
-    update.add('_acme-challenge', 300, 'TXT', token)
-
-    # Attempt to add a TXT record
-    try:
-        response = dns.query.udp(update, name_server_ip, timeout=10)
-    except DNSException as err:
-        logger.error(err)
-
-    # Wait for DNS record to propagate
-    time.sleep(5)
-
-    # Check if the TXT record was inserted
-    try:
-        answers = dns.resolver.query('_acme-challenge.' + domain_name, 'TXT')
-    except DNSException as err:
-        logger.error(err)
-        sys.exit(1)
-    else:
-        txt_records = [txt_record.strings[0] for txt_record in answers]
-        if token in txt_records:
-            logger.info(" + TXT record successfully added!")
-        else:
-            logger.info(" + TXT record not added.")
-            sys.exit(1)
-
-
-# Delete the TXT record using the dnspython API
-def delete_txt_record(domain_name, token):
-    logger.info(' + Deleting TXT record "%s" for the domain _acme-challenge.%s'
-                % (token, domain_name))
-
-    # Retrieve the specific TXT record
-    txt_record = dns.rdata.from_text(
-        dns.rdataclass.IN,
-        dns.rdatatype.TXT,
-        token)
-
-    # Attempt to delete the TXT record
-    update = dns.update.Update(
-        domain_name,
-        keyring=keyring,
-        keyalgorithm=keyalgorithm)
-    update.delete('_acme-challenge', txt_record)
-    try:
-        reponse = dns.query.udp(update, name_server_ip, timeout=10)
-    except DNSException as err:
-        logger.error(err)
-
-    # Wait for DNS record to propagate
-    time.sleep(5)
-
-    # Check if the TXT record was successfully removed
-    try:
-        answers = dns.resolver.query('_acme-challenge.' + domain_name, 'TXT')
-    except DNSException as err:
-        logger.error(err)
-        sys.exit(1)
-    else:
-        txt_records = [txt_record.strings[0] for txt_record in answers]
-        if token in txt_records:
-            logger.info(" + TXT record not successfully deleted.")
-            sys.exit(1)
-        else:
-            logger.info(" + TXT record successfully deleted.")
 
 
 def main(hook_stage, domain_name, token):
