@@ -22,6 +22,13 @@
 #
 ############################################################################
 
+# callbacks
+# deploy_challenge <DOMAIN> <TOKEN_FILENAME> <TOKEN_VALUE>
+# clean_challenge <DOMAIN> <FILENAME> <TOKEN_VALUE>
+# deploy_cert <DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAINFILE> <CHAINFILE> <TIMESTAMP>
+# unchanged_cert DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAINFILE> <CHAINFILE>
+
+
 import os
 import sys
 import time
