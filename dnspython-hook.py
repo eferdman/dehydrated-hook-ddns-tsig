@@ -89,23 +89,83 @@ def read_config():
         "-c", "--config",
         help="Read options from configuration file [%s]" % (configfile),
         metavar="FILE")
-    # stage can be: 'deploy_challenge', 'clean_challenge'
-    parser.add_argument(
-        'stage',
-        nargs=1,
-        help="stage in the certificate request process")
-    parser.add_argument(
-        'tokenfile',
-        nargs=1,
-        help="IGNORED")
-    parser.add_argument(
+    subparsers = parser.add_subparsers(help='sub-command help')
+
+    parser_deploychallenge = subparsers.add_parser('deploy_challenge', help='make ACME challenge available via DNS')
+    parser_deploychallenge.add_argument(
         'domain',
         nargs=1,
         help="domain name to request certificate for")
-    parser.add_argument(
+    parser_deploychallenge.add_argument(
+        'tokenfile',
+        nargs=1,
+        help="IGNORED")
+    parser_deploychallenge.add_argument(
         'token',
         nargs=1,
         help="ACME-provided token")
+
+    parser_cleanchallenge = subparsers.add_parser('clean_challenge', help='remove ACME challenge from DNS')
+    parser_cleanchallenge.add_argument(
+        'domain',
+        nargs=1,
+        help="domain name for which to remove cetificate challenge")
+    parser_cleanchallenge.add_argument(
+        'tokenfile',
+        nargs=1,
+        help="IGNORED")
+    parser_cleanchallenge.add_argument(
+        'token',
+        nargs=1,
+        help="ACME-provided token")
+
+    parser_deploycert = subparsers.add_parser('deploy_cert', help='deploy certificate obtained from ACME (IGNORED)')
+    parser_deploycert.add_argument(
+        'domain',
+        nargs=1,
+        help="domain name to deploy certificate for")
+    parser_deploycert.add_argument(
+        'keyfile',
+        nargs=1,
+        help="private certificate")
+    parser_deploycert.add_argument(
+        'certfile',
+        nargs=1,
+        help="public certificate")
+    parser_deploycert.add_argument(
+        'fullchainfile',
+        nargs=1,
+        help="full certificate chain")
+    parser_deploycert.add_argument(
+        'chainfile',
+        nargs=1,
+        help="certificate chain")
+    parser_deploycert.add_argument(
+        'timestamp',
+        nargs=1,
+        help="time stamp")
+
+    parser_unchangedcert = subparsers.add_parser('unchanged_cert', help='unchanged certificate obtained from ACME (IGNORED)')
+    parser_unchangedcert.add_argument(
+        'domain',
+        nargs=1,
+        help="domain name, for which the certificate hasn't changed")
+    parser_unchangedcert.add_argument(
+        'keyfile',
+        nargs=1,
+        help="private certificate")
+    parser_unchangedcert.add_argument(
+        'certfile',
+        nargs=1,
+        help="public certificate")
+    parser_unchangedcert.add_argument(
+        'fullchainfile',
+        nargs=1,
+        help="full certificate chain")
+    parser_unchangedcert.add_argument(
+        'chainfile',
+        nargs=1,
+        help="certificate chain")
 
     args = parser.parse_args()
     if args.config:
