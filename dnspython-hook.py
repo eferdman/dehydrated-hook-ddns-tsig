@@ -76,6 +76,46 @@ def get_key():
     return key_dict
 
 
+def read_config():
+    import argparse
+    try:
+        import configparser
+    except ImportError:
+        import ConfigParser as configparser
+
+    configfile="dnspython.conf"
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-c", "--config",
+        help="Read options from configuration file [%s]" % (configfile),
+        metavar="FILE")
+    # stage can be: 'deploy_challenge', 'clean_challenge'
+    parser.add_argument(
+        'stage',
+        nargs=1,
+        help="stage in the certificate request process")
+    parser.add_argument(
+        'tokenfile',
+        nargs=1,
+        help="IGNORED")
+    parser.add_argument(
+        'domain',
+        nargs=1,
+        help="domain name to request certificate for")
+    parser.add_argument(
+        'token',
+        nargs=1,
+        help="ACME-provided token")
+
+    args = parser.parse_args()
+    if args.config:
+        configfile = args.config
+
+    config = configparser.ConfigParser()
+    config.read(configfile)
+
+    return config
+
 keyring = dns.tsigkeyring.from_text(get_key())
 
 
