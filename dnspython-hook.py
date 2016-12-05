@@ -41,8 +41,10 @@ logger.setLevel(logging.INFO)
 # Replace 10.0.0.1 with the IP address of your master server.
 name_server_ip = '10.0.0.1'
 
-# If necessary, replace HMAC_MD5 with HMAC_SHA1, HMAC_SHA224, HMAC_SHA256, HMAC_SHA384, HMAC_SHA512
+# If necessary, replace HMAC_MD5
+# with HMAC_SHA1, HMAC_SHA224, HMAC_SHA256, HMAC_SHA384, HMAC_SHA512
 keyalgorithm = dns.tsig.HMAC_MD5
+
 
 def get_key():
     import iscpy
@@ -55,7 +57,8 @@ def get_key():
     # Parse the key file
     parsed_key_file = iscpy.ParseISCString(f.read())
 
-    # Grab the keyname, cut out the substring "key " and remove the extra quotes
+    # Grab the keyname, cut out the substring "key "
+    # and remove the extra quotes
     key_name = parsed_key_file.keys()[0][4:].strip('\"')
 
     # Grab the secret key
@@ -65,14 +68,21 @@ def get_key():
 
     return key_dict
 
+
 keyring = dns.tsigkeyring.from_text(get_key())
 
+
 # Create a TXT record through the dnspython API
-# Example code at https://github.com/rthalley/dnspython/blob/master/examples/ddns.py
+# Example code at
+#  https://github.com/rthalley/dnspython/blob/master/examples/ddns.py
 def create_txt_record(domain_name, token):
 
-    logger.info(" + Creating TXT record \"" + token + "\" for the domain _acme-challenge." + domain_name)
-    update = dns.update.Update(domain_name, keyring=keyring, keyalgorithm=keyalgorithm)
+    logger.info(' + Creating TXT record "%s" for the domain _acme-challenge.%s'
+                % (token, domain_name))
+    update = dns.update.Update(
+        domain_name,
+        keyring=keyring,
+        keyalgorithm=keyalgorithm)
     update.add('_acme-challenge', 300, 'TXT', token)
 
     # Attempt to add a TXT record
@@ -98,15 +108,23 @@ def create_txt_record(domain_name, token):
             logger.info(" + TXT record not added.")
             sys.exit(1)
 
+
 # Delete the TXT record using the dnspython API
 def delete_txt_record(domain_name, token):
-    logger.info(" + Deleting TXT record \"" + token + "\" for the domain _acme-challenge." + domain_name)
+    logger.info(' + Deleting TXT record "%s" for the domain _acme-challenge.%s'
+                % (token, domain_name))
 
     # Retrieve the specific TXT record
-    txt_record = dns.rdata.from_text(dns.rdataclass.IN, dns.rdatatype.TXT, token)
+    txt_record = dns.rdata.from_text(
+        dns.rdataclass.IN,
+        dns.rdatatype.TXT,
+        token)
 
     # Attempt to delete the TXT record
-    update = dns.update.Update(domain_name, keyring=keyring, keyalgorithm=keyalgorithm)
+    update = dns.update.Update(
+        domain_name,
+        keyring=keyring,
+        keyalgorithm=keyalgorithm)
     update.delete('_acme-challenge', txt_record)
     try:
         reponse = dns.query.udp(update, name_server_ip, timeout=10)
@@ -130,6 +148,7 @@ def delete_txt_record(domain_name, token):
         else:
             logger.info(" + TXT record successfully deleted.")
 
+
 def main(hook_stage, domain_name, token):
     logger.info(" + Dnsupdate.py executing " + hook_stage)
 
@@ -137,6 +156,7 @@ def main(hook_stage, domain_name, token):
         create_txt_record(domain_name, token)
     if hook_stage == 'clean_challenge':
         delete_txt_record(domain_name, token)
+
 
 if __name__ == '__main__':
     main(sys.argv[1], sys.argv[2], sys.argv[4])
