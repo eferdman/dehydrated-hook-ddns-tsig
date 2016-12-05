@@ -45,6 +45,10 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 
+# the default config-file
+configfile="dnspython.conf"
+
+
 # Replace 10.0.0.1 with the IP address of your master server.
 name_server_ip = '10.0.0.1'
 
