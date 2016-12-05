@@ -60,10 +60,23 @@ keyalgorithm = dns.tsig.HMAC_MD5
 def get_key():
     import iscpy
     key_dict = {}
+    try:
+        import iscpy
+    except ImportError:
+        logging.exception("")
+        logging.fatal("The 'iscpy' module is required to read keys from isc-config file."
+                      "Alternatively set key_name/key_secret in the configuration file")
+        sys.exit(1)
     key_file = os.environ.get('DDNS_HOOK_KEY_FILE')
 
     # Open the key file for reading
-    f = open(key_file, 'rU')
+    try:
+        f = open(key_file, 'rU')
+    except IOError:
+        logging.exception("Unable to read isc-config file")
+        logging.fatal("Did you set the DDNS_HOOK_KEY_FILE env?"
+                      "Alternatively set key_name/key_secret in the configuration file")
+        sys.exit(1)
 
     # Parse the key file
     parsed_key_file = iscpy.ParseISCString(f.read())
