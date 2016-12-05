@@ -3,7 +3,7 @@
 # dnspython-hook - dns-01 Challenge Hook Script for dehydrated.sh
 #
 # This script uses the dnspython API to create and delete TXT records
-# in order to prove ownership of a domain. 
+# in order to prove ownership of a domain.
 #
 # Copyright (C) 2016 Elizabeth Ferdman https://eferdman.github.io
 #
@@ -25,7 +25,7 @@
 import os
 import sys
 import time
-import logging 
+import logging
 import dns.resolver
 import dns.tsig
 import dns.tsigkeyring
@@ -49,10 +49,10 @@ def get_key():
     key_dict = {}
     key_file = os.environ.get('DDNS_HOOK_KEY_FILE')
 
-    # Open the key file for reading 
+    # Open the key file for reading
     f = open(key_file, 'rU')
 
-    # Parse the key file 
+    # Parse the key file
     parsed_key_file = iscpy.ParseISCString(f.read())
 
     # Grab the keyname, cut out the substring "key " and remove the extra quotes
@@ -74,7 +74,7 @@ def create_txt_record(domain_name, token):
     logger.info(" + Creating TXT record \"" + token + "\" for the domain _acme-challenge." + domain_name)
     update = dns.update.Update(domain_name, keyring=keyring, keyalgorithm=keyalgorithm)
     update.add('_acme-challenge', 300, 'TXT', token)
-    
+
     # Attempt to add a TXT record
     try:
         response = dns.query.udp(update, name_server_ip, timeout=10)
@@ -84,7 +84,7 @@ def create_txt_record(domain_name, token):
     # Wait for DNS record to propagate
     time.sleep(5)
 
-    # Check if the TXT record was inserted 
+    # Check if the TXT record was inserted
     try:
         answers = dns.resolver.query('_acme-challenge.' + domain_name, 'TXT')
     except DNSException as err:
@@ -101,7 +101,7 @@ def create_txt_record(domain_name, token):
 # Delete the TXT record using the dnspython API
 def delete_txt_record(domain_name, token):
     logger.info(" + Deleting TXT record \"" + token + "\" for the domain _acme-challenge." + domain_name)
-    
+
     # Retrieve the specific TXT record
     txt_record = dns.rdata.from_text(dns.rdataclass.IN, dns.rdatatype.TXT, token)
 
@@ -116,7 +116,7 @@ def delete_txt_record(domain_name, token):
     # Wait for DNS record to propagate
     time.sleep(5)
 
-    # Check if the TXT record was successfully removed    
+    # Check if the TXT record was successfully removed
     try:
         answers = dns.resolver.query('_acme-challenge.' + domain_name, 'TXT')
     except DNSException as err:
@@ -132,7 +132,7 @@ def delete_txt_record(domain_name, token):
 
 def main(hook_stage, domain_name, token):
     logger.info(" + Dnsupdate.py executing " + hook_stage)
-    
+
     if hook_stage == 'deploy_challenge':
         create_txt_record(domain_name, token)
     if hook_stage == 'clean_challenge':
