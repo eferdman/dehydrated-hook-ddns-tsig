@@ -96,6 +96,7 @@ def read_config():
     subparsers = parser.add_subparsers(help='sub-command help')
 
     parser_deploychallenge = subparsers.add_parser('deploy_challenge', help='make ACME challenge available via DNS')
+    parser_deploychallenge.set_defaults(func=deploy_challenge)
     parser_deploychallenge.add_argument(
         'domain',
         nargs=1,
@@ -110,6 +111,7 @@ def read_config():
         help="ACME-provided token")
 
     parser_cleanchallenge = subparsers.add_parser('clean_challenge', help='remove ACME challenge from DNS')
+    parser_cleanchallenge.set_defaults(func=clean_challenge)
     parser_cleanchallenge.add_argument(
         'domain',
         nargs=1,
@@ -124,6 +126,7 @@ def read_config():
         help="ACME-provided token")
 
     parser_deploycert = subparsers.add_parser('deploy_cert', help='deploy certificate obtained from ACME (IGNORED)')
+    parser_deploycert.set_defaults(func=deploy_cert)
     parser_deploycert.add_argument(
         'domain',
         nargs=1,
@@ -150,6 +153,7 @@ def read_config():
         help="time stamp")
 
     parser_unchangedcert = subparsers.add_parser('unchanged_cert', help='unchanged certificate obtained from ACME (IGNORED)')
+    parser_unchangedcert.set_defaults(func=unchanged_cert)
     parser_unchangedcert.add_argument(
         'domain',
         nargs=1,
