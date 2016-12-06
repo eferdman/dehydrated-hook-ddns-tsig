@@ -232,9 +232,15 @@ def ensure_config_dns(cfg):
 
     if "ttl" in cfg["config"]:
         cfg["config"]["ttl"] = int(float(cfg["config"]["ttl"]))
+    else:
+        cfg["config"]["ttl"] = 300
+
     if "wait" in cfg["config"]:
         cfg["config"]["wait"] = float(cfg["config"]["wait"])
+    else:
+        cfg["config"]["wait"] = 5
 
+    return cfg
 
 def read_config(args):
     try:
