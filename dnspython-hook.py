@@ -124,16 +124,16 @@ def create_txt_record(
         domain_name,
         keyring=keyring,
         keyalgorithm=keyalgorithm)
-    update.add('_acme-challenge', 300, 'TXT', token)
+    update.add('_acme-challenge', ttl, 'TXT', token)
 
     # Attempt to add a TXT record
     try:
-        response = dns.query.udp(update, name_server_ip, timeout=10)
+        response = dns.query.udp(update, name_server_ip, timeout=timeout)
     except DNSException as err:
         logger.error(err)
 
     # Wait for DNS record to propagate
-    time.sleep(5)
+    time.sleep(sleep)
 
     # Check if the TXT record was inserted
     try:
@@ -175,12 +175,12 @@ def delete_txt_record(
         keyalgorithm=keyalgorithm)
     update.delete('_acme-challenge', txt_record)
     try:
-        reponse = dns.query.udp(update, name_server_ip, timeout=10)
+        reponse = dns.query.udp(update, name_server_ip, timeout=timeout)
     except DNSException as err:
         logger.error(err)
 
     # Wait for DNS record to propagate
-    time.sleep(5)
+    time.sleep(sleep)
 
     # Check if the TXT record was successfully removed
     try:
