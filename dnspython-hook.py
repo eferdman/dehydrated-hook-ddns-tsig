@@ -54,7 +54,23 @@ name_server_ip = '10.0.0.1'
 
 # If necessary, replace HMAC_MD5
 # with HMAC_SHA1, HMAC_SHA224, HMAC_SHA256, HMAC_SHA384, HMAC_SHA512
-keyalgorithm = dns.tsig.HMAC_MD5
+key_algorithms = {
+    "": dns.tsig.HMAC_MD5,
+    "hmac-md5": dns.tsig.HMAC_MD5,
+    "hmac-sha1": dns.tsig.HMAC_SHA1,
+    "hmac-sha224": dns.tsig.HMAC_SHA224,
+    "hmac-sha256": dns.tsig.HMAC_SHA256,
+    "hmac-sha384": dns.tsig.HMAC_SHA384,
+    "hmac-sha512": dns.tsig.HMAC_SHA512,
+    }
+
+def get_key_algo(name='hmac-md5'):
+    try:
+        return key_algorithms[name]
+    except KeyError:
+        logging.exception("Invalid key-algorithm '%s'" % (name,))
+        logging.fatal("Only the following algorithms are allowed: %s" % (" ".join(key_algorithms.keys())))
+        sys.exit(1)
 
 
 def get_isc_key():
