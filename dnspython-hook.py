@@ -45,12 +45,13 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 
-# the default config-file
-configfiles=["dnspython.conf"]
-
-
-# Replace 10.0.0.1 with the IP address of your master server.
-name_server_ip = '10.0.0.1'
+# the default configuration
+defaults = {
+    "configfiles": ["dnspython.conf", ],
+    "name_server_ip": '10.0.0.1',
+    "ttl": 300,
+    "sleep": 5,
+    }
 
 # If necessary, replace HMAC_MD5
 # with HMAC_SHA1, HMAC_SHA224, HMAC_SHA256, HMAC_SHA384, HMAC_SHA512
@@ -246,12 +247,15 @@ def ensure_config_dns(cfg):
     if "ttl" in cfg["config"]:
         cfg["config"]["ttl"] = int(float(cfg["config"]["ttl"]))
     else:
-        cfg["config"]["ttl"] = 300
+        cfg["config"]["ttl"] = defaults["ttl"]
 
     if "wait" in cfg["config"]:
         cfg["config"]["wait"] = float(cfg["config"]["wait"])
     else:
-        cfg["config"]["wait"] = 5
+        cfg["config"]["wait"] = defaults["sleep"]
+
+    if "name_server_ip" not in cfg["config"]:
+        cfg["config"]["name_server_ip"] = defaults["name_server_ip"]
 
     return cfg
 
@@ -261,7 +265,7 @@ def read_config(args):
     except ImportError:
         import ConfigParser as configparser
 
-    cfgfiles = configfiles
+    cfgfiles = defaults["configfiles"]
     if args.config:
         cfgfiles = args.config
 
@@ -296,7 +300,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c", "--config",
-        help="Read options from configuration files [%s]" % (", ".join(configfiles)),
+        help="Read options from configuration files [%s]" % (", ".join(defaults["configfiles"])),
         action='append',
         metavar="FILE")
     subparsers = parser.add_subparsers(help='sub-command help')
