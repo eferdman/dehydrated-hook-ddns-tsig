@@ -200,14 +200,25 @@ def delete_txt_record(
 # callback to show the challenge via DNS
 def deploy_challenge(cfg):
     ensure_config_dns(cfg)
-    for c in cfg:
-        print("%s: %s" % (c, cfg[c]))
-    print("===")
+    create_txt_record(
+        cfg["args"]["domain"], cfg["args"]["token"],
+        cfg["config"]["name_server_ip"],
+        cfg["config"]["keyring"], cfg["config"]["keyalgorithm"],
+        ttl=cfg["config"]["ttl"],
+        sleep=cfg["config"]["wait"],
+        )
 
 
 # callback to clean the challenge from DNS
 def clean_challenge(cfg):
-    print(cfg)
+    ensure_config_dns(cfg)
+    delete_txt_record(
+        cfg["args"]["domain"], cfg["args"]["token"],
+        cfg["config"]["name_server_ip"],
+        cfg["config"]["keyring"], cfg["config"]["keyalgorithm"],
+        ttl=cfg["config"]["ttl"],
+        sleep=cfg["config"]["wait"],
+        )
 
 
 # callback to deploy the obtained certificate
