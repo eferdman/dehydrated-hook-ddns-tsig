@@ -110,8 +110,14 @@ def get_isc_key():
 # Create a TXT record through the dnspython API
 # Example code at
 #  https://github.com/rthalley/dnspython/blob/master/examples/ddns.py
-def create_txt_record(domain_name, token):
-
+def create_txt_record(
+        domain_name, token,
+        name_server_ip,
+        keyring, keyalgorithm=dns.tsig.HMAC_MD5,
+        ttl=300,
+        sleep=5,
+        timeout=10
+        ):
     logger.info(' + Creating TXT record "%s" for the domain _acme-challenge.%s'
                 % (token, domain_name))
     update = dns.update.Update(
@@ -145,7 +151,14 @@ def create_txt_record(domain_name, token):
 
 
 # Delete the TXT record using the dnspython API
-def delete_txt_record(domain_name, token):
+def delete_txt_record(
+        domain_name, token,
+        name_server_ip,
+        keyring, keyalgorithm=dns.tsig.HMAC_MD5,
+        ttl=300,
+        sleep=5,
+        timeout=10
+        ):
     logger.info(' + Deleting TXT record "%s" for the domain _acme-challenge.%s'
                 % (token, domain_name))
 
