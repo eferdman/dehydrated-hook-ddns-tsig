@@ -46,7 +46,7 @@ logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 
 # the default config-file
-configfile="dnspython.conf"
+configfiles=["dnspython.conf"]
 
 
 # Replace 10.0.0.1 with the IP address of your master server.
@@ -220,12 +220,12 @@ def read_config(args):
     except ImportError:
         import ConfigParser as configparser
 
-    cfgfile = configfile
+    cfgfiles = configfiles
     if args.config:
-        cfgfile = args.config
+        cfgfiles = args.config
 
     config = configparser.ConfigParser()
-    config.read(cfgfile)
+    config.read(cfgfiles)
 
     domain = args.domain[0]
     if domain in config:
@@ -255,7 +255,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c", "--config",
-        help="Read options from configuration file [%s]" % (configfile),
+        help="Read options from configuration files [%s]" % (", ".join(configfiles)),
+        action='append',
         metavar="FILE")
     subparsers = parser.add_subparsers(help='sub-command help')
 
