@@ -223,6 +223,12 @@ def ensure_config_dns(cfg):
     keyring = dns.tsigkeyring.from_text(keyringd)
     cfg["config"]["keyring"] = keyring
 
+    try:
+        algo = cfg["config"]["key_algorithm"]
+    except KeyError:
+        algo =""
+    algo = get_key_algo(algo)
+    cfg["config"]["keyalgorithm"] = algo
 
     if "ttl" in cfg["config"]:
         cfg["config"]["ttl"] = int(float(cfg["config"]["ttl"]))
