@@ -361,14 +361,7 @@ def parse_args():
     return (args.func, cfg)
 
 
-def main(hook_stage, domain_name, token):
-    logger.info(" + Dnsupdate.py executing " + hook_stage)
-
-    if hook_stage == 'deploy_challenge':
-        create_txt_record(domain_name, token)
-    if hook_stage == 'clean_challenge':
-        delete_txt_record(domain_name, token)
-
-
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2], sys.argv[4])
+    (fun, cfg) = parse_args()
+    fun(cfg)
+    sys.exit(0)
