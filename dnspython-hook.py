@@ -6,6 +6,7 @@
 # in order to prove ownership of a domain.
 #
 # Copyright (C) 2016 Elizabeth Ferdman https://eferdman.github.io
+# Copyright (C) 2016 IOhannes m zmölnig <zmoelnig@iem.at>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
