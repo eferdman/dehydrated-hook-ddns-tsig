@@ -325,7 +325,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c", "--config",
-        help="Read options from configuration files [%s]" % (", ".join(defaults["configfiles"])),
+        help="Read options from configuration files [%s]"
+             % (", ".join(defaults["configfiles"])),
         action='append',
         metavar="FILE")
     parser.add_argument(
