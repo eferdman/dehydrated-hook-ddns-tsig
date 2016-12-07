@@ -44,9 +44,9 @@ from dns.exception import DNSException
 # the default configuration
 defaults = {
     "configfiles": [
-        "/etc/dehydrated/dnspython.conf",
-        "/usr/local/etc/dehydrated/dnspython.conf",
-        "dnspython.conf", ],
+        "/etc/dehydrated/dnspython-hook.conf",
+        "/usr/local/etc/dehydrated/dnspython-hook.conf",
+        "dnspython-hook.conf", ],
     "name_server_ip": '10.0.0.1',
     "ttl": 300,
     "sleep": 5,
