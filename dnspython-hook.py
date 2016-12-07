@@ -49,6 +49,16 @@ defaults = {
     "sleep": 5,
     "loglevel": logging.WARN,
     }
+# valid key algorithms (but bind9 only supports hmac-md5)
+key_algorithms = {
+    "": dns.tsig.HMAC_MD5,
+    "hmac-md5": dns.tsig.HMAC_MD5,
+    "hmac-sha1": dns.tsig.HMAC_SHA1,
+    "hmac-sha224": dns.tsig.HMAC_SHA224,
+    "hmac-sha256": dns.tsig.HMAC_SHA256,
+    "hmac-sha384": dns.tsig.HMAC_SHA384,
+    "hmac-sha512": dns.tsig.HMAC_SHA512,
+    }
 
 # Configure some basic logging
 logger = logging.getLogger(__name__)
@@ -64,18 +74,6 @@ def set_verbosity(verbosity):
 
 
 set_verbosity(0)
-
-# If necessary, replace HMAC_MD5
-# with HMAC_SHA1, HMAC_SHA224, HMAC_SHA256, HMAC_SHA384, HMAC_SHA512
-key_algorithms = {
-    "": dns.tsig.HMAC_MD5,
-    "hmac-md5": dns.tsig.HMAC_MD5,
-    "hmac-sha1": dns.tsig.HMAC_SHA1,
-    "hmac-sha224": dns.tsig.HMAC_SHA224,
-    "hmac-sha256": dns.tsig.HMAC_SHA256,
-    "hmac-sha384": dns.tsig.HMAC_SHA384,
-    "hmac-sha512": dns.tsig.HMAC_SHA512,
-    }
 
 
 def get_key_algo(name='hmac-md5'):
