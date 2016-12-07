@@ -79,8 +79,10 @@ def get_key_algo(name='hmac-md5'):
     try:
         return key_algorithms[name]
     except KeyError:
-        logger.exception("Invalid key-algorithm '%s'" % (name,))
-        logger.fatal("Only the following algorithms are allowed: %s" % (" ".join(key_algorithms.keys())))
+        logger.debug("", exc_info=True)
+        logger.fatal("""Invalid key-algorithm '%s'
+Only the following algorithms are allowed: %s"""
+                     % (name, " ".join(key_algorithms.keys())))
         sys.exit(1)
 
 
@@ -88,9 +90,9 @@ def get_isc_key():
     try:
         import iscpy
     except ImportError:
-        logger.exception("")
-        logger.fatal("The 'iscpy' module is required to read keys from isc-config file."
-                      "Alternatively set key_name/key_secret in the configuration file")
+        logger.debug("", exc_info=True)
+        logger.fatal("""The 'iscpy' module is required to read keys from isc-config file.
+Alternatively set key_name/key_secret in the configuration file""")
         sys.exit(1)
     key_file = os.environ.get('DDNS_HOOK_KEY_FILE')
 
@@ -98,9 +100,10 @@ def get_isc_key():
     try:
         f = open(key_file, 'rU')
     except IOError:
-        logger.exception("Unable to read isc-config file")
-        logger.fatal("Did you set the DDNS_HOOK_KEY_FILE env?"
-                      "Alternatively set key_name/key_secret in the configuration file")
+        logger.debug("", exc_info=True)
+        logger.fatal("""Unable to read isc-config file!
+Did you set the DDNS_HOOK_KEY_FILE env?
+Alternatively set key_name/key_secret in the configuration file""")
         sys.exit(1)
 
     # Parse the key file
@@ -115,7 +118,6 @@ def get_isc_key():
     f.close()
 
     return (key_name, secret)
-
 
 
 # Create a TXT record through the dnspython API
@@ -141,6 +143,7 @@ def create_txt_record(
     try:
         response = dns.query.udp(update, name_server_ip, timeout=timeout)
     except DNSException as err:
+        logger.debug("", exc_info=True)
         logger.error(err)
 
     # Wait for DNS record to propagate
@@ -150,14 +153,15 @@ def create_txt_record(
     try:
         answers = dns.resolver.query('_acme-challenge.' + domain_name, 'TXT')
     except DNSException as err:
-        logger.error(err)
+        logger.debug("", exc_info=True)
+        logger.fatal("Unable to check if TXT record was successfully inserted")
         sys.exit(1)
     else:
         txt_records = [txt_record.strings[0] for txt_record in answers]
         if token in txt_records:
             logger.info(" + TXT record successfully added!")
         else:
-            logger.info(" + TXT record not added.")
+            logger.fatal(" + TXT record not added.")
             sys.exit(1)
 
 
@@ -188,7 +192,8 @@ def delete_txt_record(
     try:
         reponse = dns.query.udp(update, name_server_ip, timeout=timeout)
     except DNSException as err:
-        logger.error(err)
+        logger.debug("", exc_info=True)
+        logger.error("Error deleting TXT record")
 
     # Wait for DNS record to propagate
     time.sleep(sleep)
@@ -197,7 +202,8 @@ def delete_txt_record(
     try:
         answers = dns.resolver.query('_acme-challenge.' + domain_name, 'TXT')
     except DNSException as err:
-        logger.error(err)
+        logger.debug("", exc_info=True)
+        logger.fatal("Unable to check if TXT record was successfully removed")
         sys.exit(1)
     else:
         txt_records = [txt_record.strings[0] for txt_record in answers]
