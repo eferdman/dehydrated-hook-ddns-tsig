@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 # dnspython-hook - dns-01 Challenge Hook Script for dehydrated.sh
 #
