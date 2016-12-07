@@ -25,7 +25,7 @@
 # callbacks
 # deploy_challenge <DOMAIN> <TOKEN_FILENAME> <TOKEN_VALUE>
 # clean_challenge <DOMAIN> <FILENAME> <TOKEN_VALUE>
-# deploy_cert <DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAINFILE> <CHAINFILE> <TIMESTAMP>
+# deploy_cert <DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAIN> <CHAINFILE> <TIMESTAMP>
 # unchanged_cert DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAINFILE> <CHAINFILE>
 
 
@@ -54,12 +54,14 @@ defaults = {
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
 
+
 def set_verbosity(verbosity):
     oldlevel = logger.getEffectiveLevel()
     level = int(defaults["loglevel"] - (10 * verbosity))
     if level <= 0:
         level = 1
     logger.setLevel(level)
+
 
 set_verbosity(0)
 
@@ -74,6 +76,7 @@ key_algorithms = {
     "hmac-sha384": dns.tsig.HMAC_SHA384,
     "hmac-sha512": dns.tsig.HMAC_SHA512,
     }
+
 
 def get_key_algo(name='hmac-md5'):
     try:
@@ -213,6 +216,7 @@ def delete_txt_record(
         else:
             logger.info(" + TXT record successfully deleted.")
 
+
 # callback to show the challenge via DNS
 def deploy_challenge(cfg):
     ensure_config_dns(cfg)
@@ -248,11 +252,16 @@ def deploy_cert(cfg):
 def unchanged_cert(cfg):
     pass
 
+
 def ensure_config_dns(cfg):
     """make sure that the configuration can be used to update the DNS
 (e.g. read rndc-key if missing; fix some values if present)
 """
-    # (str)key_name, (str)key_secret, (str)name_server_ip, (int)ttl, (float)wait
+    # (str)key_name
+    # (str)key_secret
+    # (str)name_server_ip
+    # (int)ttl
+    # (float)wait
 
     try:
         key_name = cfg["config"]["key_name"]
@@ -260,14 +269,14 @@ def ensure_config_dns(cfg):
     except KeyError:
         (key_name, key_secret) = get_isc_key()
 
-    keyringd={key_name: key_secret}
+    keyringd = {key_name: key_secret}
     keyring = dns.tsigkeyring.from_text(keyringd)
     cfg["config"]["keyring"] = keyring
 
     try:
         algo = cfg["config"]["key_algorithm"]
     except KeyError:
-        algo =""
+        algo = ""
     algo = get_key_algo(algo)
     cfg["config"]["keyalgorithm"] = algo
 
@@ -285,6 +294,7 @@ def ensure_config_dns(cfg):
         cfg["config"]["name_server_ip"] = defaults["name_server_ip"]
 
     return cfg
+
 
 def read_config(args):
     try:
@@ -313,17 +323,18 @@ def read_config(args):
 
     d = dict()
     for c in config:
-        d[c]=config[c]
+        d[c] = config[c]
     result["config"] = d
 
     d = dict()
     args = vars(args)
     for c in args:
         if type(args[c]) is list:
-            d[c]=args[c][0]
+            d[c] = args[c][0]
     result["args"] = d
 
     return result
+
 
 def parse_args():
     import argparse
@@ -346,7 +357,9 @@ def parse_args():
 
     subparsers = parser.add_subparsers(help='sub-command help')
 
-    parser_deploychallenge = subparsers.add_parser('deploy_challenge', help='make ACME challenge available via DNS')
+    parser_deploychallenge = subparsers.add_parser(
+        'deploy_challenge',
+        help='make ACME challenge available via DNS')
     parser_deploychallenge.set_defaults(func=deploy_challenge)
     parser_deploychallenge.add_argument(
         'domain',
@@ -361,7 +374,9 @@ def parse_args():
         nargs=1,
         help="ACME-provided token")
 
-    parser_cleanchallenge = subparsers.add_parser('clean_challenge', help='remove ACME challenge from DNS')
+    parser_cleanchallenge = subparsers.add_parser(
+        'clean_challenge',
+        help='remove ACME challenge from DNS')
     parser_cleanchallenge.set_defaults(func=clean_challenge)
     parser_cleanchallenge.add_argument(
         'domain',
@@ -376,7 +391,9 @@ def parse_args():
         nargs=1,
         help="ACME-provided token")
 
-    parser_deploycert = subparsers.add_parser('deploy_cert', help='deploy certificate obtained from ACME (IGNORED)')
+    parser_deploycert = subparsers.add_parser(
+        'deploy_cert',
+        help='deploy certificate obtained from ACME (IGNORED)')
     parser_deploycert.set_defaults(func=deploy_cert)
     parser_deploycert.add_argument(
         'domain',
@@ -403,7 +420,9 @@ def parse_args():
         nargs=1,
         help="time stamp")
 
-    parser_unchangedcert = subparsers.add_parser('unchanged_cert', help='unchanged certificate obtained from ACME (IGNORED)')
+    parser_unchangedcert = subparsers.add_parser(
+        'unchanged_cert',
+        help='unchanged certificate obtained from ACME (IGNORED)')
     parser_unchangedcert.set_defaults(func=unchanged_cert)
     parser_unchangedcert.add_argument(
         'domain',
