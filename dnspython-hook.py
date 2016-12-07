@@ -40,10 +40,6 @@ import dns.update
 import dns.query
 from dns.exception import DNSException
 
-# Configure some basic logging
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.StreamHandler())
-logger.setLevel(logging.INFO)
 
 # the default configuration
 defaults = {
@@ -51,7 +47,21 @@ defaults = {
     "name_server_ip": '10.0.0.1',
     "ttl": 300,
     "sleep": 5,
+    "loglevel": logging.WARN,
     }
+
+# Configure some basic logging
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.StreamHandler())
+
+def set_verbosity(verbosity):
+    oldlevel = logger.getEffectiveLevel()
+    level = int(defaults["loglevel"] - (10 * verbosity))
+    if level <= 0:
+        level = 1
+    logger.setLevel(level)
+
+set_verbosity(0)
 
 # If necessary, replace HMAC_MD5
 # with HMAC_SHA1, HMAC_SHA224, HMAC_SHA256, HMAC_SHA384, HMAC_SHA512
@@ -69,8 +79,8 @@ def get_key_algo(name='hmac-md5'):
     try:
         return key_algorithms[name]
     except KeyError:
-        logging.exception("Invalid key-algorithm '%s'" % (name,))
-        logging.fatal("Only the following algorithms are allowed: %s" % (" ".join(key_algorithms.keys())))
+        logger.exception("Invalid key-algorithm '%s'" % (name,))
+        logger.fatal("Only the following algorithms are allowed: %s" % (" ".join(key_algorithms.keys())))
         sys.exit(1)
 
 
@@ -78,8 +88,8 @@ def get_isc_key():
     try:
         import iscpy
     except ImportError:
-        logging.exception("")
-        logging.fatal("The 'iscpy' module is required to read keys from isc-config file."
+        logger.exception("")
+        logger.fatal("The 'iscpy' module is required to read keys from isc-config file."
                       "Alternatively set key_name/key_secret in the configuration file")
         sys.exit(1)
     key_file = os.environ.get('DDNS_HOOK_KEY_FILE')
@@ -88,8 +98,8 @@ def get_isc_key():
     try:
         f = open(key_file, 'rU')
     except IOError:
-        logging.exception("Unable to read isc-config file")
-        logging.fatal("Did you set the DDNS_HOOK_KEY_FILE env?"
+        logger.exception("Unable to read isc-config file")
+        logger.fatal("Did you set the DDNS_HOOK_KEY_FILE env?"
                       "Alternatively set key_name/key_secret in the configuration file")
         sys.exit(1)
 
@@ -289,6 +299,10 @@ def read_config(args):
     else:
         config = config.defaults()
 
+    if "verbosity" in config and not args.verbose:
+        verbosity = float(config["verbosity"])
+        set_verbosity(verbosity)
+
     result = dict()
 
     d = dict()
@@ -314,6 +328,15 @@ def parse_args():
         help="Read options from configuration files [%s]" % (", ".join(defaults["configfiles"])),
         action='append',
         metavar="FILE")
+    parser.add_argument(
+        "-v", "--verbose",
+        help="Raise verbosity",
+        action='count', default=0)
+    parser.add_argument(
+        "-q", "--quiet",
+        help="Lower verbosity",
+        action='count', default=0)
+
     subparsers = parser.add_subparsers(help='sub-command help')
 
     parser_deploychallenge = subparsers.add_parser('deploy_challenge', help='make ACME challenge available via DNS')
@@ -397,6 +420,14 @@ def parse_args():
         help="certificate chain")
 
     args = parser.parse_args()
+    verbosity = args.verbose - args.quiet
+    args.verbose = None
+    args.quiet = None
+    if verbosity:
+        args.verbose = verbosity
+
+    set_verbosity(verbosity)
+
     cfg = read_config(args)
     return (args.func, cfg)
 
