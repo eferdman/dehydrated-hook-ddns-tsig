@@ -313,7 +313,7 @@ def read_config(args):
     config.read(cfgfiles)
 
     domain = args.domain[0]
-    if domain in config:
+    if domain in config.sections():
         config = config[domain]
     else:
         config = config.defaults()
