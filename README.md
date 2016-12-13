@@ -31,8 +31,8 @@ The following parameters can be set:
 - `TTL` time-to-live value for the challenge (default: *300*)
 - `wait` time - in seconds - to wait before verifying that the challenge is really deployed/deleted; use negative values to skip the check (default: *300*)
 - `verbosity` verbosity of the script: use negative values to suppress more messages (default: *0*)
-- `key_name` name of the key to use for authentication with the DNS server (**required**, see below)
-- `key_secret` the base64-encoded key secret (**required**, see below)
+- `key_name` name of the key to use for authentication with the DNS server (**required**, see [below](#using-an-extra-key-file))
+- `key_secret` the base64-encoded key secret (**required**, see [below](#using-an-extra-key-file))
 - `key_algorithm` the hashing algorithm of the key (default: *hmac-md5*)
 
 A complete example can be found in the `dnspython-hook.conf` file.
