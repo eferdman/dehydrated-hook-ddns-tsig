@@ -81,6 +81,17 @@ def set_verbosity(verbosity):
 set_verbosity(0)
 
 
+def post_hook(name, cfg, args):
+    key = "post_%s" % (name,)
+    if key in cfg:
+        import subprocess
+        callargs = [cfg[key], name]
+        for a in args:
+            callargs += [cfg[a]]
+        logger.info(' + Calling post %s hook: %s' % (name, ' '.join(callargs)))
+        subprocess.call(callargs)
+
+
 def get_key_algo(name='hmac-md5'):
     try:
         return key_algorithms[name]
@@ -139,20 +150,32 @@ def create_txt_record(
         ):
     logger.info(' + Creating TXT record "%s" for the domain _acme-challenge.%s'
                 % (token, domain_name))
-    update = dns.update.Update(
-        domain_name,
-        keyring=keyring,
-        keyalgorithm=keyalgorithm)
-    update.add('_acme-challenge', ttl, 'TXT', token)
 
-    # Attempt to add a TXT record
-    try:
-        response = dns.query.udp(update, name_server_ip, timeout=timeout)
-    except DNSException as err:
-        logger.debug("", exc_info=True)
-        logger.error(err)
+    domain_list = ['_acme-challenge'] + domain_name.split('.')
+    for i in range(1, len(domain_list)):
+        update = dns.update.Update(
+            '.'.join(domain_list[i:]),
+            keyring=keyring,
+            keyalgorithm=keyalgorithm)
+        update.add('.'.join(domain_list[:i]), ttl, 'TXT', token)
+        logger.debug(str(update))
+        try:
+            response = dns.query.udp(update, name_server_ip, timeout=timeout)
+            rcode = response.rcode()
+            logger.debug(" + Adding TXT record %s -> %s returned %s" % (
+                '.'.join(domain_list[:i]),
+                '.'.join(domain_list[i:]),
+                dns.rcode.to_text(rcode)))
+            if rcode is dns.rcode.NOERROR:
+                break
+        except DNSException as err:
+            logger.debug("", exc_info=True)
+            logger.error(err)
 
     # Wait for DNS record to propagate
+    if (sleep < 0):
+        return
+
     time.sleep(sleep)
 
     # Check if the TXT record was inserted
@@ -189,19 +212,31 @@ def delete_txt_record(
         dns.rdatatype.TXT,
         token)
 
-    # Attempt to delete the TXT record
-    update = dns.update.Update(
-        domain_name,
-        keyring=keyring,
-        keyalgorithm=keyalgorithm)
-    update.delete('_acme-challenge', txt_record)
-    try:
-        reponse = dns.query.udp(update, name_server_ip, timeout=timeout)
-    except DNSException as err:
-        logger.debug("", exc_info=True)
-        logger.error("Error deleting TXT record")
+    domain_list = ['_acme-challenge'] + domain_name.split('.')
+    for i in range(1, len(domain_list)):
+        # Attempt to delete the TXT record
+        update = dns.update.Update(
+            '.'.join(domain_list[i:]),
+            keyring=keyring,
+            keyalgorithm=keyalgorithm)
+        update.delete('.'.join(domain_list[:i]), txt_record)
+        logger.debug(str(update))
+        try:
+            response = dns.query.udp(update, name_server_ip, timeout=timeout)
+            rcode = response.rcode()
+            logger.debug(" + Removing TXT record %s -> %s returned %s" % (
+                '.'.join(domain_list[:i]),
+                '.'.join(domain_list[i:]),
+                dns.rcode.to_text(rcode)))
+            if rcode is dns.rcode.NOERROR:
+                break
+        except DNSException as err:
+            logger.debug("", exc_info=True)
+            logger.error("Error deleting TXT record")
 
     # Wait for DNS record to propagate
+    if (sleep < 0):
+        return
     time.sleep(sleep)
 
     # Check if the TXT record was successfully removed
@@ -230,6 +265,7 @@ def deploy_challenge(cfg):
         ttl=cfg["config"]["ttl"],
         sleep=cfg["config"]["wait"],
         )
+    post_hook('deploy_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
 
 # callback to clean the challenge from DNS
@@ -242,18 +278,25 @@ def clean_challenge(cfg):
         ttl=cfg["config"]["ttl"],
         sleep=cfg["config"]["wait"],
         )
+    post_hook('clean_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
 
 # callback to deploy the obtained certificate
 # (currently unimplemented)
 def deploy_cert(cfg):
-    pass
+    post_hook(
+        'deploy_cert', cfg,
+        ['domain',
+         'keyfile', 'certfile',
+         'fullchainfile', 'chainfile', 'timestamp'])
 
 
 # callback when the certificate has not changed
 # (currently unimplemented)
 def unchanged_cert(cfg):
-    pass
+    post_hook(
+        'unchanged_cert', cfg,
+        ['domain', 'keyfile', 'certfile', 'fullchainfile', 'chainfile'])
 
 
 def ensure_config_dns(cfg):
@@ -313,7 +356,7 @@ def read_config(args):
     config.read(cfgfiles)
 
     domain = args.domain[0]
-    if domain in config:
+    if domain in config.sections():
         config = config[domain]
     else:
         config = config.defaults()
