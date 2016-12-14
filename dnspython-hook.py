@@ -80,6 +80,17 @@ def set_verbosity(verbosity):
 set_verbosity(0)
 
 
+def post_hook(name, cfg, args):
+    key = "post_%s" % (name,)
+    if key in cfg:
+        import subprocess
+        callargs = [cfg[key], name]
+        for a in args:
+            callargs += [cfg[a]]
+        logger.info(' + Calling post %s hook: %s' % (name, ' '.join(callargs)))
+        subprocess.call(callargs)
+
+
 def get_key_algo(name='hmac-md5'):
     try:
         return key_algorithms[name]
@@ -253,6 +264,7 @@ def deploy_challenge(cfg):
         ttl=cfg["ttl"],
         sleep=cfg["wait"],
         )
+    post_hook('deploy_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
 
 # callback to clean the challenge from DNS
@@ -265,18 +277,25 @@ def clean_challenge(cfg):
         ttl=cfg["ttl"],
         sleep=cfg["wait"],
         )
+    post_hook('clean_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
 
 # callback to deploy the obtained certificate
 # (currently unimplemented)
 def deploy_cert(cfg):
-    pass
+    post_hook(
+        'deploy_cert', cfg,
+        ['domain',
+         'keyfile', 'certfile',
+         'fullchainfile', 'chainfile', 'timestamp'])
 
 
 # callback when the certificate has not changed
 # (currently unimplemented)
 def unchanged_cert(cfg):
-    pass
+    post_hook(
+        'unchanged_cert', cfg,
+        ['domain', 'keyfile', 'certfile', 'fullchainfile', 'chainfile'])
 
 
 def ensure_config_dns(cfg):
