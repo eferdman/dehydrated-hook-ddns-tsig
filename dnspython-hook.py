@@ -71,7 +71,6 @@ logger.addHandler(logging.StreamHandler())
 
 
 def set_verbosity(verbosity):
-    oldlevel = logger.getEffectiveLevel()
     level = int(defaults["loglevel"] - (10 * verbosity))
     if level <= 0:
         level = 1
