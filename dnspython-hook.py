@@ -71,7 +71,6 @@ logger.addHandler(logging.StreamHandler())
 
 
 def set_verbosity(verbosity):
-    oldlevel = logger.getEffectiveLevel()
     level = int(defaults["loglevel"] - (10 * verbosity))
     if level <= 0:
         level = 1
@@ -259,11 +258,11 @@ def delete_txt_record(
 def deploy_challenge(cfg):
     ensure_config_dns(cfg)
     create_txt_record(
-        cfg["args"]["domain"], cfg["args"]["token"],
-        cfg["config"]["name_server_ip"],
-        cfg["config"]["keyring"], cfg["config"]["keyalgorithm"],
-        ttl=cfg["config"]["ttl"],
-        sleep=cfg["config"]["wait"],
+        cfg["domain"], cfg["token"],
+        cfg["name_server_ip"],
+        cfg["keyring"], cfg["keyalgorithm"],
+        ttl=cfg["ttl"],
+        sleep=cfg["wait"],
         )
     post_hook('deploy_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
@@ -272,11 +271,11 @@ def deploy_challenge(cfg):
 def clean_challenge(cfg):
     ensure_config_dns(cfg)
     delete_txt_record(
-        cfg["args"]["domain"], cfg["args"]["token"],
-        cfg["config"]["name_server_ip"],
-        cfg["config"]["keyring"], cfg["config"]["keyalgorithm"],
-        ttl=cfg["config"]["ttl"],
-        sleep=cfg["config"]["wait"],
+        cfg["domain"], cfg["token"],
+        cfg["name_server_ip"],
+        cfg["keyring"], cfg["keyalgorithm"],
+        ttl=cfg["ttl"],
+        sleep=cfg["wait"],
         )
     post_hook('clean_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
@@ -310,39 +309,47 @@ def ensure_config_dns(cfg):
     # (float)wait
 
     try:
-        key_name = cfg["config"]["key_name"]
-        key_secret = cfg["config"]["key_secret"]
+        key_name = cfg["key_name"]
+        key_secret = cfg["key_secret"]
     except KeyError:
         (key_name, key_secret) = get_isc_key()
 
     keyringd = {key_name: key_secret}
     keyring = dns.tsigkeyring.from_text(keyringd)
-    cfg["config"]["keyring"] = keyring
+    cfg["keyring"] = keyring
 
     try:
-        algo = cfg["config"]["key_algorithm"]
+        algo = cfg["key_algorithm"]
     except KeyError:
         algo = ""
     algo = get_key_algo(algo)
-    cfg["config"]["keyalgorithm"] = algo
+    cfg["keyalgorithm"] = algo
 
-    if "ttl" in cfg["config"]:
-        cfg["config"]["ttl"] = int(float(cfg["config"]["ttl"]))
+    if "ttl" in cfg:
+        cfg["ttl"] = int(float(cfg["ttl"]))
     else:
-        cfg["config"]["ttl"] = defaults["ttl"]
+        cfg["ttl"] = defaults["ttl"]
 
-    if "wait" in cfg["config"]:
-        cfg["config"]["wait"] = float(cfg["config"]["wait"])
+    if "wait" in cfg:
+        cfg["wait"] = float(cfg["wait"])
     else:
-        cfg["config"]["wait"] = defaults["sleep"]
+        cfg["wait"] = defaults["sleep"]
 
-    if "name_server_ip" not in cfg["config"]:
-        cfg["config"]["name_server_ip"] = defaults["name_server_ip"]
+    if "name_server_ip" not in cfg:
+        cfg["name_server_ip"] = defaults["name_server_ip"]
 
     return cfg
 
 
 def read_config(args):
+    """
+read configuration file (as specified in args),
+merge it with the things specified in args
+and return a list of config-dictionaries.
+
+e.g. [{'domain': 'example.com', 'tokenfile': '-', 'token': 'secret',
+       'verbosity': 1, 'key_name': 'bla', 'key_value': '...'},]
+"""
     try:
         import configparser
     except ImportError:
@@ -355,29 +362,48 @@ def read_config(args):
     config = configparser.ConfigParser()
     config.read(cfgfiles)
 
-    domain = args.domain[0]
-    if domain in config.sections():
-        config = config[domain]
-    else:
-        config = config.defaults()
+    # now merge args and conf
+    # we need to remove all the private args (used for building the argparser)
+    # args has the sub-command arguments as lists,
+    #  because they can be given multiple times (hook-chain)
+    # we zip these dictionaries-of-lists into a list-of-dictionaries,
+    #  and then iterate over the list, filling in more info from the config
 
-    if "verbosity" in config and not args.verbose:
-        verbosity = float(config["verbosity"])
-        set_verbosity(verbosity)
+    # remove some unwanted keys
+    argdict = dict((k, v)
+                   for k, v in vars(args).items()
+                   if not k.startswith("_"))
+    for k in ['config', ]:
+        try:
+            del argdict[k]
+        except KeyError:
+            pass
 
-    result = dict()
+    # zip the dict-of-lists int o list-of-dicts
+    result = [_
+              for _ in map(dict, zip(*[[(k, v[0]) for v in value]
+                                       for k, value in argdict.items()
+                                       if type(value) is list]))]
 
-    d = dict()
-    for c in config:
-        d[c] = config[c]
-    result["config"] = d
+    # fill in the values from the configfile
+    for res in result:
+        domain = res['domain']
+        if domain in config.sections():
+            cfg = config[domain]
+        else:
+            cfg = config.defaults()
 
-    d = dict()
-    args = vars(args)
-    for c in args:
-        if type(args[c]) is list:
-            d[c] = args[c][0]
-    result["args"] = d
+        for c in cfg:
+            res[c] = cfg[c]
+
+        # special handling of 'verbosity':
+        # base_verbosity (configfile) + offset (cmdline)
+        verbosity = 0
+        if args.verbose:
+            verbosity += args.verbose
+        if "verbosity" in cfg:
+            verbosity += float(cfg["verbosity"])
+        res['verbosity'] = verbosity
 
     return result
 
@@ -406,92 +432,121 @@ def parse_args():
     parser_deploychallenge = subparsers.add_parser(
         'deploy_challenge',
         help='make ACME challenge available via DNS')
-    parser_deploychallenge.set_defaults(func=deploy_challenge)
+    parser_deploychallenge.set_defaults(
+        _func=deploy_challenge,
+        _parser=parser_deploychallenge)
     parser_deploychallenge.add_argument(
         'domain',
-        nargs=1,
+        nargs=1, action='append',
         help="domain name to request certificate for")
     parser_deploychallenge.add_argument(
         'tokenfile',
-        nargs=1,
+        nargs=1, action='append',
         help="IGNORED")
     parser_deploychallenge.add_argument(
         'token',
-        nargs=1,
+        nargs=1, action='append',
         help="ACME-provided token")
+    parser_deploychallenge.add_argument(
+        '_extra',
+        nargs='*',
+        metavar='...',
+        action='append',
+        help="domain1 tokenfile1 token1 ...")
 
     parser_cleanchallenge = subparsers.add_parser(
         'clean_challenge',
         help='remove ACME challenge from DNS')
-    parser_cleanchallenge.set_defaults(func=clean_challenge)
+    parser_cleanchallenge.set_defaults(
+        _func=clean_challenge,
+        _parser=parser_cleanchallenge)
     parser_cleanchallenge.add_argument(
         'domain',
-        nargs=1,
+        nargs=1, action='append',
         help="domain name for which to remove cetificate challenge")
     parser_cleanchallenge.add_argument(
         'tokenfile',
-        nargs=1,
+        nargs=1, action='append',
         help="IGNORED")
     parser_cleanchallenge.add_argument(
         'token',
-        nargs=1,
+        nargs=1, action='append',
         help="ACME-provided token")
+    parser_cleanchallenge.add_argument(
+        '_extra',
+        nargs='*',
+        metavar='...',
+        action='append',
+        help="domain1 tokenfile1 token1 ...")
 
     parser_deploycert = subparsers.add_parser(
         'deploy_cert',
-        help='deploy certificate obtained from ACME (IGNORED)')
-    parser_deploycert.set_defaults(func=deploy_cert)
+        help='deploy certificate obtained from ACME (UNIMPLEMENTED)')
+    parser_deploycert.set_defaults(
+        _func=deploy_cert,
+        _parser=parser_deploycert)
     parser_deploycert.add_argument(
         'domain',
-        nargs=1,
+        nargs=1, action='append',
         help="domain name to deploy certificate for")
     parser_deploycert.add_argument(
         'keyfile',
-        nargs=1,
+        nargs=1, action='append',
         help="private certificate")
     parser_deploycert.add_argument(
         'certfile',
-        nargs=1,
+        nargs=1, action='append',
         help="public certificate")
     parser_deploycert.add_argument(
         'fullchainfile',
-        nargs=1,
+        nargs=1, action='append',
         help="full certificate chain")
     parser_deploycert.add_argument(
         'chainfile',
-        nargs=1,
+        nargs=1, action='append',
         help="certificate chain")
     parser_deploycert.add_argument(
         'timestamp',
-        nargs=1,
+        nargs=1, action='append',
         help="time stamp")
 
     parser_unchangedcert = subparsers.add_parser(
         'unchanged_cert',
         help='unchanged certificate obtained from ACME (IGNORED)')
-    parser_unchangedcert.set_defaults(func=unchanged_cert)
+    parser_unchangedcert.set_defaults(
+        _func=unchanged_cert,
+        _parser=parser_unchangedcert)
     parser_unchangedcert.add_argument(
         'domain',
-        nargs=1,
+        nargs=1, action='append',
         help="domain name, for which the certificate hasn't changed")
     parser_unchangedcert.add_argument(
         'keyfile',
-        nargs=1,
+        nargs=1, action='append',
         help="private certificate")
     parser_unchangedcert.add_argument(
         'certfile',
-        nargs=1,
+        nargs=1, action='append',
         help="public certificate")
     parser_unchangedcert.add_argument(
         'fullchainfile',
-        nargs=1,
+        nargs=1, action='append',
         help="full certificate chain")
     parser_unchangedcert.add_argument(
         'chainfile',
-        nargs=1,
+        nargs=1, action='append',
         help="certificate chain")
 
     args = parser.parse_args()
+    try:
+        while(args._extra[0]):
+            extra = args._extra[0]
+            args._extra = []
+            args = args._parser.parse_args(extra, args)
+    except AttributeError:
+        # no '_extra' attribute in this sub-parser
+        pass
+
     verbosity = args.verbose - args.quiet
     args.verbose = None
     args.quiet = None
@@ -501,10 +556,12 @@ def parse_args():
     set_verbosity(verbosity)
 
     cfg = read_config(args)
-    return (args.func, cfg)
+    return (args._func, cfg)
 
 
 if __name__ == '__main__':
-    (fun, cfg) = parse_args()
-    fun(cfg)
+    (fun, cfgs) = parse_args()
+    for cfg in cfgs:
+        set_verbosity(cfg['verbosity'])
+        fun(cfg)
     sys.exit(0)
