@@ -29,7 +29,7 @@ with default values in the `[DEFAULT]` section.
 The following parameters can be set:
 - `name_server_ip` the DNS server IP that will serve the ACME challenge (**required**)
 - `TTL` time-to-live value for the challenge (default: *300*)
-- `wait` time - in seconds - to wait before verifying that the challenge is really deployed/deleted; use negative values to skip the check (default: *300*)
+- `wait` time - in seconds - to wait before verifying that the challenge is really deployed/deleted; use negative values to skip the check (default: *5*)
 - `verbosity` verbosity of the script: use negative values to suppress more messages (default: *0*)
 - `key_name` name of the key to use for authentication with the DNS server (**required**, see [below](#using-an-extra-key-file))
 - `key_secret` the base64-encoded key secret (**required**, see [below](#using-an-extra-key-file))
