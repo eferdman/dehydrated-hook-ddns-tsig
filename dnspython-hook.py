@@ -324,6 +324,14 @@ def ensure_config_dns(cfg):
 
 
 def read_config(args):
+    """
+read configuration file (as specified in args),
+merge it with the things specified in args
+and return a list of config-dictionaries.
+
+e.g. [{'domain': 'example.com', 'tokenfile': '-', 'token': 'secret',
+       'verbosity': 1, 'key_name': 'bla', 'key_value': '...'},]
+"""
     try:
         import configparser
     except ImportError:
@@ -336,29 +344,53 @@ def read_config(args):
     config = configparser.ConfigParser()
     config.read(cfgfiles)
 
-    domain = args.domain[0]
-    if domain in config.sections():
-        config = config[domain]
-    else:
-        config = config.defaults()
+    # now merge args and conf
+    # we need to remove all the private args (used for building the argparser)
+    # args has the sub-command arguments as lists,
+    #  because they can be given multiple times (hook-chain)
+    # we zip these dictionaries-of-lists into a list-of-dictionaries,
+    #  and then iterate over the list, filling in additional info from the config
 
-    if "verbosity" in config and not args.verbose:
-        verbosity = float(config["verbosity"])
-        set_verbosity(verbosity)
+    # remove some unwanted keys
+    argdict = dict((k, v) for k, v in vars(args).items() if not k.startswith("_"))
+    for k in ['config',]:
+        try:
+            del argdict[k]
+        except KeyError:
+            pass
 
-    result = dict()
+    # zip the dict-of-lists int o list-of-dicts
+    result = [_ for _ in
+                  map(dict, zip(*[[(k, v[0]) for v in value]
+                                      for k, value in argdict.items()
+                                      if type(value) is list]))]
 
-    d = dict()
-    for c in config:
-        d[c] = config[c]
-    result["config"] = d
+    # fill in the values from the configfile
+    for res in result:
+        domain = res['domain']
+        if domain in config.sections():
+            cfg = config[domain]
+        else:
+            cfg = config.defaults()
 
-    d = dict()
-    args = vars(args)
-    for c in args:
-        if type(args[c]) is list:
-            d[c] = args[c][0]
-    result["args"] = d
+        for c in cfg:
+            res[c] = cfg[c]
+
+        # special handling of 'verbosity', which can be overridden from the cmdline
+        try:
+            del res['verbosity']
+        except KeyError:
+            pass
+        verbosity = args.verbose
+        if args.verbose is not None:
+            res['verbosity'] = args.verbose
+        elif "verbosity" in cfg:
+            res['verbosity'] = float(cfg["verbosity"])
+
+        try:
+            set_verbosity(res['verbosity'])
+        except KeyError:
+            pass
 
     return result
 
