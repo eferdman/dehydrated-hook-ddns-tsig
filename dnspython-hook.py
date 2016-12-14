@@ -348,21 +348,23 @@ e.g. [{'domain': 'example.com', 'tokenfile': '-', 'token': 'secret',
     # args has the sub-command arguments as lists,
     #  because they can be given multiple times (hook-chain)
     # we zip these dictionaries-of-lists into a list-of-dictionaries,
-    #  and then iterate over the list, filling in additional info from the config
+    #  and then iterate over the list, filling in more info from the config
 
     # remove some unwanted keys
-    argdict = dict((k, v) for k, v in vars(args).items() if not k.startswith("_"))
-    for k in ['config',]:
+    argdict = dict((k, v)
+                   for k, v in vars(args).items()
+                   if not k.startswith("_"))
+    for k in ['config', ]:
         try:
             del argdict[k]
         except KeyError:
             pass
 
     # zip the dict-of-lists int o list-of-dicts
-    result = [_ for _ in
-                  map(dict, zip(*[[(k, v[0]) for v in value]
-                                      for k, value in argdict.items()
-                                      if type(value) is list]))]
+    result = [_
+              for _ in map(dict, zip(*[[(k, v[0]) for v in value]
+                                       for k, value in argdict.items()
+                                       if type(value) is list]))]
 
     # fill in the values from the configfile
     for res in result:
@@ -411,7 +413,9 @@ def parse_args():
     parser_deploychallenge = subparsers.add_parser(
         'deploy_challenge',
         help='make ACME challenge available via DNS')
-    parser_deploychallenge.set_defaults(_func=deploy_challenge, _parser=parser_deploychallenge)
+    parser_deploychallenge.set_defaults(
+        _func=deploy_challenge,
+        _parser=parser_deploychallenge)
     parser_deploychallenge.add_argument(
         'domain',
         nargs=1, action='append',
@@ -434,7 +438,9 @@ def parse_args():
     parser_cleanchallenge = subparsers.add_parser(
         'clean_challenge',
         help='remove ACME challenge from DNS')
-    parser_cleanchallenge.set_defaults(_func=clean_challenge, _parser=parser_cleanchallenge)
+    parser_cleanchallenge.set_defaults(
+        _func=clean_challenge,
+        _parser=parser_cleanchallenge)
     parser_cleanchallenge.add_argument(
         'domain',
         nargs=1, action='append',
@@ -457,7 +463,9 @@ def parse_args():
     parser_deploycert = subparsers.add_parser(
         'deploy_cert',
         help='deploy certificate obtained from ACME (UNIMPLEMENTED)')
-    parser_deploycert.set_defaults(_func=deploy_cert, _parser=parser_deploycert)
+    parser_deploycert.set_defaults(
+        _func=deploy_cert,
+        _parser=parser_deploycert)
     parser_deploycert.add_argument(
         'domain',
         nargs=1, action='append',
@@ -486,7 +494,9 @@ def parse_args():
     parser_unchangedcert = subparsers.add_parser(
         'unchanged_cert',
         help='unchanged certificate obtained from ACME (IGNORED)')
-    parser_unchangedcert.set_defaults(_func=unchanged_cert, _parser=parser_unchangedcert)
+    parser_unchangedcert.set_defaults(
+        _func=unchanged_cert,
+        _parser=parser_unchangedcert)
     parser_unchangedcert.add_argument(
         'domain',
         nargs=1, action='append',
@@ -511,9 +521,9 @@ def parse_args():
     args = parser.parse_args()
     try:
         while(args._extra[0]):
-            extra=args._extra[0]
-            args._extra=[]
-            args=args._parser.parse_args(extra, args)
+            extra = args._extra[0]
+            args._extra = []
+            args = args._parser.parse_args(extra, args)
     except AttributeError:
         # no '_extra' attribute in this sub-parser
         pass
