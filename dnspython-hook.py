@@ -376,21 +376,14 @@ e.g. [{'domain': 'example.com', 'tokenfile': '-', 'token': 'secret',
         for c in cfg:
             res[c] = cfg[c]
 
-        # special handling of 'verbosity', which can be overridden from the cmdline
-        try:
-            del res['verbosity']
-        except KeyError:
-            pass
-        verbosity = args.verbose
-        if args.verbose is not None:
-            res['verbosity'] = args.verbose
-        elif "verbosity" in cfg:
-            res['verbosity'] = float(cfg["verbosity"])
-
-        try:
-            set_verbosity(res['verbosity'])
-        except KeyError:
-            pass
+        # special handling of 'verbosity':
+        # base_verbosity (configfile) + offset (cmdline)
+        verbosity = 0
+        if args.verbose:
+            verbosity += args.verbose
+        if "verbosity" in cfg:
+            verbosity += float(cfg["verbosity"])
+        res['verbosity'] = verbosity
 
     return result
 
