@@ -387,7 +387,7 @@ def parse_args():
     parser_deploychallenge = subparsers.add_parser(
         'deploy_challenge',
         help='make ACME challenge available via DNS')
-    parser_deploychallenge.set_defaults(func=deploy_challenge, parser=parser_deploychallenge)
+    parser_deploychallenge.set_defaults(_func=deploy_challenge, _parser=parser_deploychallenge)
     parser_deploychallenge.add_argument(
         'domain',
         nargs=1, action='append',
@@ -401,7 +401,7 @@ def parse_args():
         nargs=1, action='append',
         help="ACME-provided token")
     parser_deploychallenge.add_argument(
-        'extra',
+        '_extra',
         nargs='*',
         metavar='...',
         action='append',
@@ -410,7 +410,7 @@ def parse_args():
     parser_cleanchallenge = subparsers.add_parser(
         'clean_challenge',
         help='remove ACME challenge from DNS')
-    parser_cleanchallenge.set_defaults(func=clean_challenge, parser=parser_cleanchallenge)
+    parser_cleanchallenge.set_defaults(_func=clean_challenge, _parser=parser_cleanchallenge)
     parser_cleanchallenge.add_argument(
         'domain',
         nargs=1, action='append',
@@ -424,7 +424,7 @@ def parse_args():
         nargs=1, action='append',
         help="ACME-provided token")
     parser_cleanchallenge.add_argument(
-        'extra',
+        '_extra',
         nargs='*',
         metavar='...',
         action='append',
@@ -433,7 +433,7 @@ def parse_args():
     parser_deploycert = subparsers.add_parser(
         'deploy_cert',
         help='deploy certificate obtained from ACME (UNIMPLEMENTED)')
-    parser_deploycert.set_defaults(func=deploy_cert, parser=parser_deploycert)
+    parser_deploycert.set_defaults(_func=deploy_cert, _parser=parser_deploycert)
     parser_deploycert.add_argument(
         'domain',
         nargs=1, action='append',
@@ -462,7 +462,7 @@ def parse_args():
     parser_unchangedcert = subparsers.add_parser(
         'unchanged_cert',
         help='unchanged certificate obtained from ACME (IGNORED)')
-    parser_unchangedcert.set_defaults(func=unchanged_cert, parser=parser_unchangedcert)
+    parser_unchangedcert.set_defaults(_func=unchanged_cert, _parser=parser_unchangedcert)
     parser_unchangedcert.add_argument(
         'domain',
         nargs=1, action='append',
@@ -486,12 +486,12 @@ def parse_args():
 
     args = parser.parse_args()
     try:
-        while(args.extra[0]):
-            extra=args.extra[0]
-            args.extra=[]
-            args=args.parser.parse_args(extra, args)
+        while(args._extra[0]):
+            extra=args._extra[0]
+            args._extra=[]
+            args=args._parser.parse_args(extra, args)
     except AttributeError:
-        # no 'extra' attribute in this sub-parser
+        # no '_extra' attribute in this sub-parser
         pass
 
     verbosity = args.verbose - args.quiet
@@ -503,7 +503,7 @@ def parse_args():
     set_verbosity(verbosity)
 
     cfg = read_config(args)
-    return (args.func, cfg)
+    return (args._func, cfg)
 
 
 if __name__ == '__main__':
