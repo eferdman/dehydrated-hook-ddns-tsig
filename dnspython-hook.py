@@ -201,17 +201,27 @@ def delete_txt_record(
         dns.rdatatype.TXT,
         token)
 
-    # Attempt to delete the TXT record
-    update = dns.update.Update(
-        domain_name,
-        keyring=keyring,
-        keyalgorithm=keyalgorithm)
-    update.delete('_acme-challenge', txt_record)
-    try:
-        reponse = dns.query.udp(update, name_server_ip, timeout=timeout)
-    except DNSException as err:
-        logger.debug("", exc_info=True)
-        logger.error("Error deleting TXT record")
+    domain_list = ['_acme_challenge'] + domain_name.split('.')
+    for i in range(1, len(domain_list)):
+        # Attempt to delete the TXT record
+        update = dns.update.Update(
+            '.'.join(domain_list[i:]),
+            keyring=keyring,
+            keyalgorithm=keyalgorithm)
+        update.delete('.'.join(domain_list[:i]), txt_record)
+        logger.debug(str(update))
+        try:
+            response = dns.query.udp(update, name_server_ip, timeout=timeout)
+            rcode = response.rcode()
+            logger.debug(" + Removing TXT record %s -> %s returned %s" % (
+                '.'.join(domain_list[:i]),
+                '.'.join(domain_list[i:]),
+                dns.rcode.to_text(rcode)))
+            if rcode is dns.rcode.NOERROR:
+                break
+        except DNSException as err:
+            logger.debug("", exc_info=True)
+            logger.error("Error deleting TXT record")
 
     # Wait for DNS record to propagate
     if (sleep < 0):
