@@ -139,18 +139,27 @@ def create_txt_record(
         ):
     logger.info(' + Creating TXT record "%s" for the domain _acme-challenge.%s'
                 % (token, domain_name))
-    update = dns.update.Update(
-        domain_name,
-        keyring=keyring,
-        keyalgorithm=keyalgorithm)
-    update.add('_acme-challenge', ttl, 'TXT', token)
 
-    # Attempt to add a TXT record
-    try:
-        response = dns.query.udp(update, name_server_ip, timeout=timeout)
-    except DNSException as err:
-        logger.debug("", exc_info=True)
-        logger.error(err)
+    domain_list = ['_acme_challenge'] + domain_name.split('.')
+    for i in range(1, len(domain_list)):
+        update = dns.update.Update(
+            '.'.join(domain_list[i:]),
+            keyring=keyring,
+            keyalgorithm=keyalgorithm)
+        update.add('.'.join(domain_list[:i]), ttl, 'TXT', token)
+        logger.debug(str(update))
+        try:
+            response = dns.query.udp(update, name_server_ip, timeout=timeout)
+            rcode = response.rcode()
+            logger.debug(" + Adding TXT record %s -> %s returned %s" % (
+                '.'.join(domain_list[:i]),
+                '.'.join(domain_list[i:]),
+                dns.rcode.to_text(rcode)))
+            if rcode is dns.rcode.NOERROR:
+                break
+        except DNSException as err:
+            logger.debug("", exc_info=True)
+            logger.error(err)
 
     # Wait for DNS record to propagate
     if (sleep < 0):
