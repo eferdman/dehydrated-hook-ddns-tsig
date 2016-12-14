@@ -153,6 +153,9 @@ def create_txt_record(
         logger.error(err)
 
     # Wait for DNS record to propagate
+    if (sleep < 0):
+        return
+
     time.sleep(sleep)
 
     # Check if the TXT record was inserted
@@ -202,6 +205,8 @@ def delete_txt_record(
         logger.error("Error deleting TXT record")
 
     # Wait for DNS record to propagate
+    if (sleep < 0):
+        return
     time.sleep(sleep)
 
     # Check if the TXT record was successfully removed
