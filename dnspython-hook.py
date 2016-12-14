@@ -534,5 +534,6 @@ def parse_args():
 if __name__ == '__main__':
     (fun, cfgs) = parse_args()
     for cfg in cfgs:
+        set_verbosity(cfg['verbosity'])
         fun(cfg)
     sys.exit(0)
