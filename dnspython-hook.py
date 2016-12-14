@@ -539,6 +539,7 @@ def parse_args():
 
 
 if __name__ == '__main__':
-    (fun, cfg) = parse_args()
-    fun(cfg)
+    (fun, cfgs) = parse_args()
+    for cfg in cfgs:
+        fun(cfg)
     sys.exit(0)
