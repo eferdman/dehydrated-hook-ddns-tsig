@@ -140,7 +140,7 @@ def create_txt_record(
     logger.info(' + Creating TXT record "%s" for the domain _acme-challenge.%s'
                 % (token, domain_name))
 
-    domain_list = ['_acme_challenge'] + domain_name.split('.')
+    domain_list = ['_acme-challenge'] + domain_name.split('.')
     for i in range(1, len(domain_list)):
         update = dns.update.Update(
             '.'.join(domain_list[i:]),
@@ -201,7 +201,7 @@ def delete_txt_record(
         dns.rdatatype.TXT,
         token)
 
-    domain_list = ['_acme_challenge'] + domain_name.split('.')
+    domain_list = ['_acme-challenge'] + domain_name.split('.')
     for i in range(1, len(domain_list)):
         # Attempt to delete the TXT record
         update = dns.update.Update(
