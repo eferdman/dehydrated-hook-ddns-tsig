@@ -248,11 +248,11 @@ def delete_txt_record(
 def deploy_challenge(cfg):
     ensure_config_dns(cfg)
     create_txt_record(
-        cfg["args"]["domain"], cfg["args"]["token"],
-        cfg["config"]["name_server_ip"],
-        cfg["config"]["keyring"], cfg["config"]["keyalgorithm"],
-        ttl=cfg["config"]["ttl"],
-        sleep=cfg["config"]["wait"],
+        cfg["domain"], cfg["token"],
+        cfg["name_server_ip"],
+        cfg["keyring"], cfg["keyalgorithm"],
+        ttl=cfg["ttl"],
+        sleep=cfg["wait"],
         )
 
 
@@ -260,11 +260,11 @@ def deploy_challenge(cfg):
 def clean_challenge(cfg):
     ensure_config_dns(cfg)
     delete_txt_record(
-        cfg["args"]["domain"], cfg["args"]["token"],
-        cfg["config"]["name_server_ip"],
-        cfg["config"]["keyring"], cfg["config"]["keyalgorithm"],
-        ttl=cfg["config"]["ttl"],
-        sleep=cfg["config"]["wait"],
+        cfg["domain"], cfg["token"],
+        cfg["name_server_ip"],
+        cfg["keyring"], cfg["keyalgorithm"],
+        ttl=cfg["ttl"],
+        sleep=cfg["wait"],
         )
 
 
@@ -291,34 +291,34 @@ def ensure_config_dns(cfg):
     # (float)wait
 
     try:
-        key_name = cfg["config"]["key_name"]
-        key_secret = cfg["config"]["key_secret"]
+        key_name = cfg["key_name"]
+        key_secret = cfg["key_secret"]
     except KeyError:
         (key_name, key_secret) = get_isc_key()
 
     keyringd = {key_name: key_secret}
     keyring = dns.tsigkeyring.from_text(keyringd)
-    cfg["config"]["keyring"] = keyring
+    cfg["keyring"] = keyring
 
     try:
-        algo = cfg["config"]["key_algorithm"]
+        algo = cfg["key_algorithm"]
     except KeyError:
         algo = ""
     algo = get_key_algo(algo)
-    cfg["config"]["keyalgorithm"] = algo
+    cfg["keyalgorithm"] = algo
 
-    if "ttl" in cfg["config"]:
-        cfg["config"]["ttl"] = int(float(cfg["config"]["ttl"]))
+    if "ttl" in cfg:
+        cfg["ttl"] = int(float(cfg["ttl"]))
     else:
-        cfg["config"]["ttl"] = defaults["ttl"]
+        cfg["ttl"] = defaults["ttl"]
 
-    if "wait" in cfg["config"]:
-        cfg["config"]["wait"] = float(cfg["config"]["wait"])
+    if "wait" in cfg:
+        cfg["wait"] = float(cfg["wait"])
     else:
-        cfg["config"]["wait"] = defaults["sleep"]
+        cfg["wait"] = defaults["sleep"]
 
-    if "name_server_ip" not in cfg["config"]:
-        cfg["config"]["name_server_ip"] = defaults["name_server_ip"]
+    if "name_server_ip" not in cfg:
+        cfg["name_server_ip"] = defaults["name_server_ip"]
 
     return cfg
 
