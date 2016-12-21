@@ -136,6 +136,80 @@ Alternatively set key_name/key_secret in the configuration file""")
     return (key_name, secret)
 
 
+def query_NS_record(domain_name):
+    """get the nameservers for <name>
+
+Return a list of nameserver IPs (might be empty)
+"""
+    name_list = domain_name.split('.')
+    for i in range(0, len(name_list)):
+        nameservers = []
+        try:
+            for ns in [rdata.target.to_unicode()
+                       for rdata in dns.resolver.query('.'.join(name_list[i:]),
+                                                       'NS')]:
+                nameservers += [_.to_text() for _ in dns.resolver.query(ns)]
+        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN) as e:
+            continue
+        if nameservers:
+            return nameservers
+    return list()
+
+
+def verify_record(domain_name,
+                  nameservers,
+                  rtype='A',
+                  rdata=None,
+                  timeout=0,
+                  invert=False):
+    """verifies that a certain record is present on all nameservers
+
+Checks whether an <rtype> record for <domain_name> is present on
+all IPs listed in <nameservers>.
+If <rdata> is not None, this also verifies that at least one <rtype> field
+in each nameserver is <rdata>.
+
+If <invert> is True, the verification is inverted
+(the record must NOT be present).
+
+Return True if the record could be verified, false otherwise.
+
+"""
+    resolver = dns.resolver.Resolver(configure=False)
+    now = None
+    if timeout and timeout > 0:
+        now = time.time()
+        resolver.timeout = timeout
+
+    for ns in nameservers:
+        if now and ((time.time() - now) > timeout):
+            return False
+        logger.info(" + Verifying %s %s %s=%s @%s"
+                    % (domain_name,
+                       "lacks" if invert else "has",
+                       rtype,
+                       rdata if rdata is not None else "*",
+                       ns))
+        resolver.nameservers = [ns]
+        answer = []
+        try:
+            answer = [_.to_text().strip('"'+"'")
+                      for _ in resolver.query(domain_name, rtype)]
+        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer) as e:
+            # probably not there yet...
+            logger.debug("Unable to verify %s record for %s @ %s" % (rtype, domain_name, ns))
+            if not invert:
+                return False
+
+        if rdata is None:
+            if not (invert ^ bool(answer)):
+                return False
+        else:
+            if not (invert ^ (rdata in answer)):
+                return False
+    return True
+
+
 # Create a TXT record through the dnspython API
 # Example code at
 #  https://github.com/rthalley/dnspython/blob/master/examples/ddns.py
@@ -175,22 +249,30 @@ def create_txt_record(
     if (sleep < 0):
         return
 
-    time.sleep(sleep)
-
-    # Check if the TXT record was inserted
-    try:
-        answers = dns.resolver.query('_acme-challenge.' + domain_name, 'TXT')
-    except DNSException as err:
-        logger.debug("", exc_info=True)
-        logger.fatal("Unable to check if TXT record was successfully inserted")
-        sys.exit(1)
-    else:
-        txt_records = [txt_record.strings[0] for txt_record in answers]
-        if token in txt_records:
-            logger.info(" + TXT record successfully added!")
-        else:
-            logger.fatal(" + TXT record not added.")
+    microsleep = min(1, sleep/3.)
+    nameservers = query_NS_record('.'.join(domain_list))
+    if not nameservers:
+        nameservers = [name_server_ip]
+    now = time.time()
+    while (time.time() - now < sleep):
+        try:
+            if verify_record('.'.join(domain_list),
+                             nameservers,
+                             rtype='TXT',
+                             rdata=token,
+                             timeout=sleep,
+                             invert=False):
+                logger.info(" + TXT record successfully added!")
+                return
+        except Exception:
+            logger.debug("", exc_info=True)
+            logger.fatal(
+                "Unable to check if TXT record was successfully inserted")
             sys.exit(1)
+        time.sleep(microsleep)
+
+    logger.fatal(" + TXT record not added.")
+    sys.exit(1)
 
 
 # Delete the TXT record using the dnspython API
@@ -236,22 +318,31 @@ def delete_txt_record(
     # Wait for DNS record to propagate
     if (sleep < 0):
         return
-    time.sleep(sleep)
 
-    # Check if the TXT record was successfully removed
-    try:
-        answers = dns.resolver.query('_acme-challenge.' + domain_name, 'TXT')
-    except DNSException as err:
-        logger.debug("", exc_info=True)
-        logger.fatal("Unable to check if TXT record was successfully removed")
-        sys.exit(1)
-    else:
-        txt_records = [txt_record.strings[0] for txt_record in answers]
-        if token in txt_records:
-            logger.info(" + TXT record not successfully deleted.")
+    microsleep = min(1, sleep/3.)
+    nameservers = query_NS_record('.'.join(domain_list))
+    if not nameservers:
+        nameservers = [name_server_ip]
+    now = time.time()
+    while (time.time() - now < sleep):
+        try:
+            if verify_record('.'.join(domain_list),
+                             nameservers,
+                             rtype='TXT',
+                             rdata=token,
+                             timeout=sleep,
+                             invert=True):
+                logger.info(" + TXT record successfully deleted!")
+                return
+        except Exception:
+            logger.debug("", exc_info=True)
+            logger.fatal(
+                "Unable to check if TXT record was successfully removed")
             sys.exit(1)
-        else:
-            logger.info(" + TXT record successfully deleted.")
+        time.sleep(microsleep)
+
+    logger.fatal(" + TXT record not deleted.")
+    sys.exit(1)
 
 
 # callback to show the challenge via DNS
