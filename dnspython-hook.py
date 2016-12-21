@@ -248,22 +248,30 @@ def create_txt_record(
     if (sleep < 0):
         return
 
-    time.sleep(sleep)
-
-    # Check if the TXT record was inserted
-    try:
-        answers = dns.resolver.query('_acme-challenge.' + domain_name, 'TXT')
-    except DNSException as err:
-        logger.debug("", exc_info=True)
-        logger.fatal("Unable to check if TXT record was successfully inserted")
-        sys.exit(1)
-    else:
-        txt_records = [txt_record.strings[0] for txt_record in answers]
-        if token in txt_records:
-            logger.info(" + TXT record successfully added!")
-        else:
-            logger.fatal(" + TXT record not added.")
+    microsleep = min(1, sleep/3.)
+    nameservers = query_NS_record('.'.join(domain_list))
+    if not nameservers:
+        nameservers = [name_server_ip]
+    now = time.time()
+    while (time.time() - now < sleep):
+        try:
+            if verify_record('.'.join(domain_list),
+                             nameservers,
+                             rtype='TXT',
+                             rdata=token,
+                             timeout=sleep,
+                             invert=False):
+                logger.info(" + TXT record successfully added!")
+                return
+        except Exception:
+            logger.debug("", exc_info=True)
+            logger.fatal(
+                "Unable to check if TXT record was successfully inserted")
             sys.exit(1)
+        time.sleep(microsleep)
+
+    logger.fatal(" + TXT record not added.")
+    sys.exit(1)
 
 
 # Delete the TXT record using the dnspython API
@@ -309,22 +317,31 @@ def delete_txt_record(
     # Wait for DNS record to propagate
     if (sleep < 0):
         return
-    time.sleep(sleep)
 
-    # Check if the TXT record was successfully removed
-    try:
-        answers = dns.resolver.query('_acme-challenge.' + domain_name, 'TXT')
-    except DNSException as err:
-        logger.debug("", exc_info=True)
-        logger.fatal("Unable to check if TXT record was successfully removed")
-        sys.exit(1)
-    else:
-        txt_records = [txt_record.strings[0] for txt_record in answers]
-        if token in txt_records:
-            logger.info(" + TXT record not successfully deleted.")
+    microsleep = min(1, sleep/3.)
+    nameservers = query_NS_record('.'.join(domain_list))
+    if not nameservers:
+        nameservers = [name_server_ip]
+    now = time.time()
+    while (time.time() - now < sleep):
+        try:
+            if verify_record('.'.join(domain_list),
+                             nameservers,
+                             rtype='TXT',
+                             rdata=token,
+                             timeout=sleep,
+                             invert=True):
+                logger.info(" + TXT record successfully deleted!")
+                return
+        except Exception:
+            logger.debug("", exc_info=True)
+            logger.fatal(
+                "Unable to check if TXT record was successfully removed")
             sys.exit(1)
-        else:
-            logger.info(" + TXT record successfully deleted.")
+        time.sleep(microsleep)
+
+    logger.fatal(" + TXT record not deleted.")
+    sys.exit(1)
 
 
 # callback to show the challenge via DNS
