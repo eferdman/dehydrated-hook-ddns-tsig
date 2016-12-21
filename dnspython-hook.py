@@ -195,8 +195,9 @@ Return True if the record could be verified, false otherwise.
         try:
             answer = [_.to_text().strip('"'+"'")
                       for _ in resolver.query(domain_name, rtype)]
-        except dns.resolver.NXDOMAIN:
+        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer) as e:
             # probably not there yet...
+            logger.debug("Unable to verify %s record for %s @ %s" % (rtype, domain_name, ns))
             if not invert:
                 return False
 
