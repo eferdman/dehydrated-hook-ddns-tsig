@@ -136,6 +136,79 @@ Alternatively set key_name/key_secret in the configuration file""")
     return (key_name, secret)
 
 
+def query_NS_record(domain_name):
+    """get the nameservers for <name>
+
+Return a list of nameserver IPs (might be empty)
+"""
+    name_list = domain_name.split('.')
+    for i in range(0, len(name_list)):
+        nameservers = []
+        try:
+            for ns in [rdata.target.to_unicode()
+                       for rdata in dns.resolver.query('.'.join(name_list[i:]),
+                                                       'NS')]:
+                nameservers += [_.to_text() for _ in dns.resolver.query(ns)]
+        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN) as e:
+            continue
+        if nameservers:
+            return nameservers
+    return list()
+
+
+def verify_record(domain_name,
+                  nameservers,
+                  rtype='A',
+                  rdata=None,
+                  timeout=0,
+                  invert=False):
+    """verifies that a certain record is present on all nameservers
+
+Checks whether an <rtype> record for <domain_name> is present on
+all IPs listed in <nameservers>.
+If <rdata> is not None, this also verifies that at least one <rtype> field
+in each nameserver is <rdata>.
+
+If <invert> is True, the verification is inverted
+(the record must NOT be present).
+
+Return True if the record could be verified, false otherwise.
+
+"""
+    resolver = dns.resolver.Resolver(configure=False)
+    now = None
+    if timeout and timeout > 0:
+        now = time.time()
+        resolver.timeout = timeout
+
+    for ns in nameservers:
+        if now and ((time.time() - now) > timeout):
+            return False
+        logger.info(" + Verifying %s %s %s=%s @%s"
+                    % (domain_name,
+                       "lacks" if invert else "has",
+                       rtype,
+                       rdata if rdata is not None else "*",
+                       ns))
+        resolver.nameservers = [ns]
+        answer = []
+        try:
+            answer = [_.to_text().strip('"'+"'")
+                      for _ in resolver.query(domain_name, rtype)]
+        except dns.resolver.NXDOMAIN:
+            # probably not there yet...
+            if not invert:
+                return False
+
+        if rdata is None:
+            if not (invert ^ bool(answer)):
+                return False
+        else:
+            if not (invert ^ (rdata in answer)):
+                return False
+    return True
+
+
 # Create a TXT record through the dnspython API
 # Example code at
 #  https://github.com/rthalley/dnspython/blob/master/examples/ddns.py
