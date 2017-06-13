@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# dehydrated-hook-ddns-tsig - dns-01 Challenge Hook Script for dehydrated.sh
+# dehydrated-hook-ddns-tsig - dns-01 Challenge Hook Script for dehydrated
 #
 # This script uses the dnspython API to create and delete TXT records
 # in order to prove ownership of a domain.
