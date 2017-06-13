@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# dnspython-hook - dns-01 Challenge Hook Script for dehydrated.sh
+# dehydrated-hook-ddns-tsig - dns-01 Challenge Hook Script for dehydrated.sh
 #
 # This script uses the dnspython API to create and delete TXT records
 # in order to prove ownership of a domain.
@@ -46,9 +46,9 @@ from dns.exception import DNSException
 # the default configuration
 defaults = {
     "configfiles": [
-        "/etc/dehydrated/dnspython-hook.conf",
-        "/usr/local/etc/dehydrated/dnspython-hook.conf",
-        "dnspython-hook.conf", ],
+        "/etc/dehydrated/dehydrated-hook-ddns-tsig.conf",
+        "/usr/local/etc/dehydrated/dehydrated-hook-ddns-tsig.conf",
+        "dehydrated-hook-ddns-tsig.conf", ],
     "name_server_ip": '10.0.0.1',
     "ttl": 300,
     "sleep": 5,
