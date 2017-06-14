@@ -1,6 +1,6 @@
-# dnspython hook for dehydrated
+# ddns-tsig hook for dehydrated
 
-This repository contains a python hook for the `dehydrated.sh` project, a Let's Encrypt/ACME client implemented as a shell script. This hook uses the dnspython API to perform dynamic DNS updates and queries to verify. The DNS challenge is outlined in the [ACME protocol](https://letsencrypt.github.io/acme-spec/#rfc.section.7.4). To successfully complete this challenge, the client creates a temporary TXT record containing a secret token for the given domain name, thereby proving ownership of the domain. 
+This repository contains a python hook for the [dehydrated](https://github.com/lukas2511/dehydrated) project, a Let's Encrypt/ACME client implemented as a shell script. This hook uses the dnspython API to perform dynamic DNS updates and queries to verify. The DNS challenge is outlined in the [ACME protocol](https://letsencrypt.github.io/acme-spec/#rfc.section.7.4). To successfully complete this challenge, the client creates a temporary TXT record containing a secret token for the given domain name, thereby proving ownership of the domain. 
 
 ## Required Python libraries
 * [dnspython](http://www.dnspython.org/) - a DNS toolkit used for queries, zone transfers, and dynamic updates
@@ -11,16 +11,16 @@ Download the files for installation
 
 ``` sh
   $ git clone https://github.com/lukas2511/dehydrated.git
-  $ mkdir -p dehydrated/hooks/dnspython
-  $ git clone https://github.com/eferdman/dnspython-hook.git dehydrated/hooks/dnspython
+  $ mkdir -p dehydrated/hooks/ddns-tsig
+  $ git clone https://github.com/eferdman/dehydrated-hook-ddns-tsig.git dehydrated/hooks/ddns-tsig
 ```
 
 ## Configuration
 The script reads a configuration file as specified via the cmdline (using the `--config` flag),
 falling back to these default config files:
-- `$(pwd)/dnspython-hook.conf`
-- `/etc/dehydrate/dnspython-hook.conf`
-- `/usr/local/etc/dehydrate/dnspython-hook.conf`
+- `$(pwd)/dehydrated-hook-ddns-tsig.conf`
+- `/etc/dehydrate/dehydrated-hook-ddns-tsig.conf`
+- `/usr/local/etc/dehydrate/dehydrated-hook-ddns-tsig.conf`
 
 The configuration file uses a simple `INI`-style syntax,
 where you can set the parameters for each domain separately (by creating a section named after the domain),
@@ -35,7 +35,7 @@ The following parameters can be set:
 - `key_secret` the base64-encoded key secret (**required**, see [below](#using-an-extra-key-file))
 - `key_algorithm` the hashing algorithm of the key (default: *hmac-md5*)
 
-A complete example can be found in the `dnspython-hook.conf` file.
+A complete example can be found in the `dehydrated-hook-ddns-tsig.conf` file.
 
 ### Using an extra key file
 If you do not want to specify key name and key secret in the config file,
@@ -58,14 +58,14 @@ See the [dehydrated script](https://github.com/lukas2511/dehydrated) for more op
 
 ``` bash
 $ cd dehydrated
-$ ./dehydrated -c --challenge dns-01 --domain myblog.com --hook ./hooks/dnspython/dnspython-hook.py
+$ ./dehydrated -c --challenge dns-01 --domain myblog.com --hook ./hooks/ddns-tsig/dehydrated-hook-ddns-tsig.py
 ```
 
 Or to test the script directly:
 
 ``` bash
-$ python dnspython-hook.py deploy_challenge yourdomain.com - "Hello World"
-$ python dnspython-hook.py clean_challenge yourdomain.com - "Hello World"
+$ python dehydrated-hook-ddns-tsig.py deploy_challenge yourdomain.com - "Hello World"
+$ python dehydrated-hook-ddns-tsig.py clean_challenge yourdomain.com - "Hello World"
 ```
 
 ## Contribute
