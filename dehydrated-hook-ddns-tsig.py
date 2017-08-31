@@ -388,6 +388,12 @@ def unchanged_cert(cfg):
         'unchanged_cert', cfg,
         ['domain', 'keyfile', 'certfile', 'fullchainfile', 'chainfile'])
 
+# callback when ACME exists
+# (currently unimplemented)
+def exit_hook(cfg):
+    post_hook(
+        'exit_hook', cfg)
+
 
 def ensure_config_dns(cfg):
     """make sure that the configuration can be used to update the DNS
@@ -627,6 +633,12 @@ def parse_args():
         'chainfile',
         nargs=1, action='append',
         help="certificate chain")
+
+    parser_exithook = subparsers.add_parser(
+        'exit_hook',
+        help='exit_hook (IGNORED)')
+    parser_exithook.set_defaults(
+        _func=exit_hook)
 
     args = parser.parse_args()
     try:
