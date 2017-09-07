@@ -47,7 +47,15 @@ The script reads the name of this key file from the environmental variable `DDNS
 $ export DDNS_HOOK_KEY_FILE="path/to/key/file.key"
 ```
 
-The file must be formatted in an [rndc/bind](https://ftp.isc.org/isc/bind9/cur/9.9/doc/arm/man.rndc.conf.html) compatible way.
+The file must be formatted in an [rndc/bind](https://ftp.isc.org/isc/bind9/cur/9.9/doc/arm/man.rndc.conf.html) compatible way,
+e.g. like:
+
+``` isc
+key "testkey" {
+   secret "R3HI8P6BKw9ZwXwN3VZKuQ==";
+   algorithm = hmac-md5;
+};
+```
 
 Only when using *this* method for acquiring the key,
 you must have [iscpy](https://pypi.python.org/pypi/iscpy) installed.
