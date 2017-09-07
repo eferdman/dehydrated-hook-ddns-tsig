@@ -600,6 +600,13 @@ def parse_args():
         'timestamp',
         nargs=1, action='append',
         help="time stamp")
+    parser_deploycert.add_argument(
+        '_extra',
+        nargs='*',
+        metavar='...',
+        action='append',
+        help="domain1 keyfile1 certfile1 fullchainfile1 chainfile1 timestamp1 ...",
+        )
 
     parser_unchangedcert = subparsers.add_parser(
         'unchanged_cert',
@@ -627,6 +634,13 @@ def parse_args():
         'chainfile',
         nargs=1, action='append',
         help="certificate chain")
+    parser_unchangedcert.add_argument(
+        '_extra',
+        nargs='*',
+        metavar='...',
+        action='append',
+        help="domain1 keyfile1 certfile1 fullchainfile1 chainfile1 ...",
+        )
 
     args = parser.parse_args()
     try:
