@@ -34,6 +34,7 @@ The following parameters can be set:
 - `key_name` name of the key to use for authentication with the DNS server (**required**, see [below](#using-an-extra-key-file))
 - `key_secret` the base64-encoded key secret (**required**, see [below](#using-an-extra-key-file))
 - `key_algorithm` the hashing algorithm of the key (default: *hmac-md5*)
+- `dns_rewrite` a regular expression to rewrite the DNS record used to publish the challenge (default: no rewriting)
 
 A complete example can be found in the `dehydrated-hook-ddns-tsig.conf` file.
 
