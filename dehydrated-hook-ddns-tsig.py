@@ -34,7 +34,7 @@
 # startup_hook.
 # exit_hook.
 
-
+import re
 import os
 import sys
 import time
@@ -57,6 +57,7 @@ defaults = {
     "ttl": 300,
     "sleep": 5,
     "loglevel": logging.WARN,
+    "dns_rewrite": None,
     }
 # valid key algorithms (but bind9 only supports hmac-md5)
 key_algorithms = {
@@ -224,10 +225,15 @@ def create_txt_record(
         keyring, keyalgorithm=dns.tsig.HMAC_MD5,
         ttl=300,
         sleep=5,
-        timeout=10
+        timeout=10,
+        rewrite=None,
         ):
     domain_name = "_acme-challenge." + domain_name
     domain_names = []
+    if rewrite:
+        d2 = rewrite(domain_name)
+        if d2 != domain_name:
+            domain_names += [d2]
     domain_names += [domain_name]
 
     def _do_create_txt(dn):
@@ -300,10 +306,15 @@ def delete_txt_record(
         keyring, keyalgorithm=dns.tsig.HMAC_MD5,
         ttl=300,
         sleep=5,
-        timeout=10
+        timeout=10,
+        rewrite=None,
         ):
     domain_name = "_acme-challenge." + domain_name
     domain_names = []
+    if rewrite:
+        d2 = rewrite(domain_name)
+        if d2 != domain_name:
+            domain_names += [d2]
     domain_names += [domain_name]
 
     # Retrieve the specific TXT record
@@ -385,6 +396,7 @@ def deploy_challenge(cfg):
         cfg["keyring"], cfg["keyalgorithm"],
         ttl=cfg["ttl"],
         sleep=cfg["wait"],
+        rewrite=cfg["dns_rewrite"],
         )
     return post_hook('deploy_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
@@ -398,6 +410,7 @@ def clean_challenge(cfg):
         cfg["keyring"], cfg["keyalgorithm"],
         ttl=cfg["ttl"],
         sleep=cfg["wait"],
+        rewrite=cfg["dns_rewrite"],
         )
     return post_hook('clean_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
@@ -444,6 +457,27 @@ def exit_hook(cfg):
     return post_hook('request_failure', cfg, [])
 
 
+def rewriter(sed):
+    if not sed:
+        return None
+    try:
+        cmd, pattern, repl, options = re.split(r'(?<![^\\]\\)/', sed)
+        if cmd != 's':
+            logger.warn(
+                "invalid string-transformation '%s', must be 's/PATTERN/REPL/'",
+                sed)
+            return None
+        regex = re.compile(pattern)
+        return lambda s: regex.sub(
+            re.sub(r'\\/', '/', repl),
+            s,
+            count='g' not in options)
+    except Exception as e:
+            logger.debug("", exc_info=True)
+            logger.warn("invalid string-transformation '%s'" % (sed))
+    return
+
+
 def ensure_config_dns(cfg):
     """make sure that the configuration can be used to update the DNS
 (e.g. read rndc-key if missing; fix some values if present)
@@ -483,6 +517,8 @@ def ensure_config_dns(cfg):
 
     if "name_server_ip" not in cfg:
         cfg["name_server_ip"] = defaults["name_server_ip"]
+
+    cfg["dns_rewrite"] = rewriter (cfg.get("dns_rewrite") or defaults.get("dns_rewrite"))
 
     return cfg
 
