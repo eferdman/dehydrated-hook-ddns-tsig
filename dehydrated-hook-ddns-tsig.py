@@ -27,7 +27,7 @@
 # callbacks:
 # *deploy_challenge <DOMAIN> <TOKEN_FILENAME> <TOKEN_VALUE>.
 # *clean_challenge <DOMAIN> <FILENAME> <TOKEN_VALUE>.
-# deploy_cert <DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAIN> <CHAINFILE> <TIMESTAMP>.
+# deploy_cert <DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAIN> <CHAINFILE> <TSTAMP>.
 # unchanged_cert DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAINFILE> <CHAINFILE>.
 # invalid_challenge <DOMAIN> <RESPONSE>.
 # request_failure <STATUSCODE> <REASON> <REQTYPE>.
@@ -203,7 +203,9 @@ Return True if the record could be verified, false otherwise.
                       for _ in resolver.query(domain_name, rtype)]
         except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer) as e:
             # probably not there yet...
-            logger.debug("Unable to verify %s record for %s @ %s" % (rtype, domain_name, ns))
+            logger.debug(
+                "Unable to verify %s record for %s @ %s" %
+                (rtype, domain_name, ns))
             if not invert:
                 return False
 
@@ -251,7 +253,10 @@ def create_txt_record(
             update.add(head, ttl, 'TXT', token)
             logger.debug(str(update))
             try:
-                response = dns.query.udp(update, name_server_ip, timeout=timeout)
+                response = dns.query.udp(
+                    update,
+                    name_server_ip,
+                    timeout=timeout)
                 rcode = response.rcode()
                 logger.debug(" + Creating TXT record %s -> %s returned %s" % (
                     head, tail,
@@ -260,7 +265,9 @@ def create_txt_record(
                     return dn
             except DNSException as err:
                 logger.debug("", exc_info=True)
-                logger.error(err)
+                logger.error(
+                    "Error creating TXT record %s %s: %s" %
+                    (head, tail, err))
 
     name = None
     for dn in domain_names:
@@ -325,8 +332,9 @@ def delete_txt_record(
 
     def _do_delete_txt(dn):
         domain_list = dn.split('.')
-        logger.info(' + Deleting TXT record "%s" for the domain %s'
-                % (token, dn))
+        logger.info(
+            ' + Deleting TXT record "%s" for the domain %s' % (token, dn)
+            )
 
         for i in range(1, len(domain_list)):
             head = '.'.join(domain_list[:i])
@@ -339,7 +347,10 @@ def delete_txt_record(
             update.delete(head, txt_record)
             logger.debug(str(update))
             try:
-                response = dns.query.udp(update, name_server_ip, timeout=timeout)
+                response = dns.query.udp(
+                    update,
+                    name_server_ip,
+                    timeout=timeout)
                 rcode = response.rcode()
                 logger.debug(" + Removing TXT record %s -> %s returned %s" % (
                     head, tail,
@@ -348,7 +359,9 @@ def delete_txt_record(
                     return dn
             except DNSException as err:
                 logger.debug("", exc_info=True)
-                logger.error("Error deleting TXT record %s %s" % (head, tail))
+                logger.error(
+                    "Error deleting TXT record %s %s: %s" %
+                    (head, tail, err))
 
     name = None
     for dn in domain_names:
@@ -433,12 +446,14 @@ def unchanged_cert(cfg):
         'unchanged_cert', cfg,
         ['domain', 'keyfile', 'certfile', 'fullchainfile', 'chainfile'])
 
+
 # challenge response has failed
 def invalid_challenge(cfg):
     """challenge response failed [no-op]"""
     return post_hook(
         'invalid_challenge', cfg,
         ['domain', 'response'])
+
 
 # something went wrong when talking to the ACME-server
 def request_failure(cfg):
@@ -447,10 +462,12 @@ def request_failure(cfg):
         'request_failure', cfg,
         ['statuscode', 'reason', 'reqtype'])
 
+
 def startup_hook(cfg):
     """Called at beginning of cron-command, for some initial tasks
 (e.g. start a webserver)"""
     return post_hook('request_failure', cfg, [])
+
 
 def exit_hook(cfg):
     """Called at end of cron command, to do some cleanup"""
@@ -464,7 +481,7 @@ def rewriter(sed):
         cmd, pattern, repl, options = re.split(r'(?<![^\\]\\)/', sed)
         if cmd != 's':
             logger.warn(
-                "invalid string-transformation '%s', must be 's/PATTERN/REPL/'",
+                "invalid string-transformation '%s', must be 's/PTRN/REPL/'",
                 sed)
             return None
         regex = re.compile(pattern)
@@ -518,7 +535,9 @@ def ensure_config_dns(cfg):
     if "name_server_ip" not in cfg:
         cfg["name_server_ip"] = defaults["name_server_ip"]
 
-    cfg["dns_rewrite"] = rewriter (cfg.get("dns_rewrite") or defaults.get("dns_rewrite"))
+    cfg["dns_rewrite"] = rewriter(
+        cfg.get("dns_rewrite")
+        or defaults.get("dns_rewrite"))
 
     return cfg
 
@@ -698,7 +717,7 @@ def parse_args():
         nargs='*',
         metavar='...',
         action='append',
-        help="domain1 keyfile1 certfile1 fullchainfile1 chainfile1 timestamp1 ...",
+        help="domain1 keyfile1 certfile1 fullchainfile1 chainfile1 ts1 ...",
         )
 
     parser_unchangedcert = subparsers.add_parser(
