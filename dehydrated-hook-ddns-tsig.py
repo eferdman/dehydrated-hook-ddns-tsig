@@ -93,6 +93,7 @@ def post_hook(name, cfg, args):
             callargs += [cfg[a]]
         logger.info(' + Calling post %s hook: %s' % (name, ' '.join(callargs)))
         subprocess.call(callargs)
+    return
 
 
 def get_key_algo(name='hmac-md5'):
@@ -359,7 +360,7 @@ def deploy_challenge(cfg):
         ttl=cfg["ttl"],
         sleep=cfg["wait"],
         )
-    post_hook('deploy_challenge', cfg, ['domain', 'tokenfile', 'token'])
+    return post_hook('deploy_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
 
 # callback to clean the challenge from DNS
@@ -372,13 +373,13 @@ def clean_challenge(cfg):
         ttl=cfg["ttl"],
         sleep=cfg["wait"],
         )
-    post_hook('clean_challenge', cfg, ['domain', 'tokenfile', 'token'])
+    return post_hook('clean_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
 
 # callback to deploy the obtained certificate
 def deploy_cert(cfg):
     """deploy obtained certificates [no-op]"""
-    post_hook(
+    return post_hook(
         'deploy_cert', cfg,
         ['domain',
          'keyfile', 'certfile',
@@ -389,7 +390,7 @@ def deploy_cert(cfg):
 # (currently unimplemented)
 def unchanged_cert(cfg):
     """called when certificated is still valid [no-op]"""
-    post_hook(
+    return post_hook(
         'unchanged_cert', cfg,
         ['domain', 'keyfile', 'certfile', 'fullchainfile', 'chainfile'])
 
