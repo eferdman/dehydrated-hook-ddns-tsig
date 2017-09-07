@@ -226,55 +226,68 @@ def create_txt_record(
         sleep=5,
         timeout=10
         ):
-    logger.info(' + Creating TXT record "%s" for the domain _acme-challenge.%s'
-                % (token, domain_name))
+    domain_name = "_acme-challenge." + domain_name
+    domain_names = []
+    domain_names += [domain_name]
 
-    domain_list = ['_acme-challenge'] + domain_name.split('.')
-    for i in range(1, len(domain_list)):
-        update = dns.update.Update(
-            '.'.join(domain_list[i:]),
-            keyring=keyring,
-            keyalgorithm=keyalgorithm)
-        update.add('.'.join(domain_list[:i]), ttl, 'TXT', token)
-        logger.debug(str(update))
-        try:
-            response = dns.query.udp(update, name_server_ip, timeout=timeout)
-            rcode = response.rcode()
-            logger.debug(" + Adding TXT record %s -> %s returned %s" % (
-                '.'.join(domain_list[:i]),
-                '.'.join(domain_list[i:]),
-                dns.rcode.to_text(rcode)))
-            if rcode is dns.rcode.NOERROR:
-                break
-        except DNSException as err:
-            logger.debug("", exc_info=True)
-            logger.error(err)
+    def _do_create_txt(dn):
+        domain_list = dn.split('.')
+        logger.info(' + Creating TXT record "%s" for the domain %s'
+                    % (token, dn))
+
+        for i in range(1, len(domain_list)):
+            head = '.'.join(domain_list[:i])
+            tail = '.'.join(domain_list[i:])
+            update = dns.update.Update(
+                tail,
+                keyring=keyring,
+                keyalgorithm=keyalgorithm)
+            update.add(head, ttl, 'TXT', token)
+            logger.debug(str(update))
+            try:
+                response = dns.query.udp(update, name_server_ip, timeout=timeout)
+                rcode = response.rcode()
+                logger.debug(" + Creating TXT record %s -> %s returned %s" % (
+                    head, tail,
+                    dns.rcode.to_text(rcode)))
+                if rcode is dns.rcode.NOERROR:
+                    return dn
+            except DNSException as err:
+                logger.debug("", exc_info=True)
+                logger.error(err)
+
+    name = None
+    for dn in domain_names:
+        name = _do_create_txt(dn)
+        if name:
+            break
 
     # Wait for DNS record to propagate
-    if (sleep < 0):
-        return
+    if name:
+        if (sleep < 0):
+            return
 
-    microsleep = min(1, sleep/3.)
-    nameservers = query_NS_record('.'.join(domain_list))
-    if not nameservers:
-        nameservers = [name_server_ip]
-    now = time.time()
-    while (time.time() - now < sleep):
-        try:
-            if verify_record('.'.join(domain_list),
-                             nameservers,
-                             rtype='TXT',
-                             rdata=token,
-                             timeout=sleep,
-                             invert=False):
-                logger.info(" + TXT record successfully added!")
-                return
-        except Exception:
-            logger.debug("", exc_info=True)
-            logger.fatal(
-                "Unable to check if TXT record was successfully inserted")
-            sys.exit(1)
-        time.sleep(microsleep)
+        microsleep = min(1, sleep/3.)
+        nameservers = query_NS_record(name)
+        if not nameservers:
+            nameservers = [name_server_ip]
+        now = time.time()
+        while (time.time() - now < sleep):
+            try:
+                if verify_record(name,
+                                 nameservers,
+                                 rtype='TXT',
+                                 rdata=token,
+                                 timeout=sleep,
+                                 invert=False):
+                    logger.info(" + TXT record successfully added!")
+                    return
+            except Exception:
+                logger.debug("", exc_info=True)
+                logger.fatal(
+                    "Unable to check if TXT record was successfully inserted")
+                sys.exit(1)
+            time.sleep(microsleep)
 
     logger.fatal(" + TXT record not added.")
     sys.exit(1)
@@ -289,8 +302,9 @@ def delete_txt_record(
         sleep=5,
         timeout=10
         ):
-    logger.info(' + Deleting TXT record "%s" for the domain _acme-challenge.%s'
-                % (token, domain_name))
+    domain_name = "_acme-challenge." + domain_name
+    domain_names = []
+    domain_names += [domain_name]
 
     # Retrieve the specific TXT record
     txt_record = dns.rdata.from_text(
@@ -298,53 +312,65 @@ def delete_txt_record(
         dns.rdatatype.TXT,
         token)
 
-    domain_list = ['_acme-challenge'] + domain_name.split('.')
-    for i in range(1, len(domain_list)):
-        # Attempt to delete the TXT record
-        update = dns.update.Update(
-            '.'.join(domain_list[i:]),
-            keyring=keyring,
-            keyalgorithm=keyalgorithm)
-        update.delete('.'.join(domain_list[:i]), txt_record)
-        logger.debug(str(update))
-        try:
-            response = dns.query.udp(update, name_server_ip, timeout=timeout)
-            rcode = response.rcode()
-            logger.debug(" + Removing TXT record %s -> %s returned %s" % (
-                '.'.join(domain_list[:i]),
-                '.'.join(domain_list[i:]),
-                dns.rcode.to_text(rcode)))
-            if rcode is dns.rcode.NOERROR:
-                break
-        except DNSException as err:
-            logger.debug("", exc_info=True)
-            logger.error("Error deleting TXT record")
+    def _do_delete_txt(dn):
+        domain_list = dn.split('.')
+        logger.info(' + Deleting TXT record "%s" for the domain %s'
+                % (token, dn))
 
-    # Wait for DNS record to propagate
-    if (sleep < 0):
-        return
+        for i in range(1, len(domain_list)):
+            head = '.'.join(domain_list[:i])
+            tail = '.'.join(domain_list[i:])
+            # Attempt to delete the TXT record
+            update = dns.update.Update(
+                tail,
+                keyring=keyring,
+                keyalgorithm=keyalgorithm)
+            update.delete(head, txt_record)
+            logger.debug(str(update))
+            try:
+                response = dns.query.udp(update, name_server_ip, timeout=timeout)
+                rcode = response.rcode()
+                logger.debug(" + Removing TXT record %s -> %s returned %s" % (
+                    head, tail,
+                    dns.rcode.to_text(rcode)))
+                if rcode is dns.rcode.NOERROR:
+                    return dn
+            except DNSException as err:
+                logger.debug("", exc_info=True)
+                logger.error("Error deleting TXT record %s %s" % (head, tail))
 
-    microsleep = min(1, sleep/3.)
-    nameservers = query_NS_record('.'.join(domain_list))
-    if not nameservers:
-        nameservers = [name_server_ip]
-    now = time.time()
-    while (time.time() - now < sleep):
-        try:
-            if verify_record('.'.join(domain_list),
-                             nameservers,
-                             rtype='TXT',
-                             rdata=token,
-                             timeout=sleep,
-                             invert=True):
-                logger.info(" + TXT record successfully deleted!")
-                return
-        except Exception:
-            logger.debug("", exc_info=True)
-            logger.fatal(
-                "Unable to check if TXT record was successfully removed")
-            sys.exit(1)
-        time.sleep(microsleep)
+    name = None
+    for dn in domain_names:
+        name = _do_delete_txt(dn)
+        if name:
+            break
+
+    if (name):
+        # Wait for DNS record to propagate
+        if (sleep < 0):
+            return
+
+        microsleep = min(1, sleep/3.)
+        nameservers = query_NS_record(name)
+        if not nameservers:
+            nameservers = [name_server_ip]
+        now = time.time()
+        while (time.time() - now < sleep):
+            try:
+                if verify_record(name,
+                                 nameservers,
+                                 rtype='TXT',
+                                 rdata=token,
+                                 timeout=sleep,
+                                 invert=True):
+                    logger.info(" + TXT record successfully deleted!")
+                    return
+            except Exception:
+                logger.debug("", exc_info=True)
+                logger.fatal(
+                    "Unable to check if TXT record was successfully removed")
+                sys.exit(1)
+            time.sleep(microsleep)
 
     logger.fatal(" + TXT record not deleted.")
     sys.exit(1)
