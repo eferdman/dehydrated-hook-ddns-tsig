@@ -543,7 +543,8 @@ def parse_args():
         nargs='*',
         metavar='...',
         action='append',
-        help="domain1 tokenfile1 token1 ...")
+        help="domain1 tokenfile1 token1 ...",
+        )
 
     parser_cleanchallenge = subparsers.add_parser(
         'clean_challenge',
@@ -568,7 +569,8 @@ def parse_args():
         nargs='*',
         metavar='...',
         action='append',
-        help="domain1 tokenfile1 token1 ...")
+        help="domain1 tokenfile1 token1 ...",
+        )
 
     parser_deploycert = subparsers.add_parser(
         'deploy_cert',
