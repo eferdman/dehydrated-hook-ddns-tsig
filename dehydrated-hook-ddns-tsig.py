@@ -393,6 +393,29 @@ def unchanged_cert(cfg):
         'unchanged_cert', cfg,
         ['domain', 'keyfile', 'certfile', 'fullchainfile', 'chainfile'])
 
+# challenge response has failed
+def invalid_challenge(cfg):
+    """challenge response failed [no-op]"""
+    return post_hook(
+        'invalid_challenge', cfg,
+        ['domain', 'response'])
+
+# something went wrong when talking to the ACME-server
+def request_failure(cfg):
+    """called when HTTP requests failed (e.g. ACME server is busy [no-op])"""
+    return post_hook(
+        'request_failure', cfg,
+        ['statuscode', 'reason', 'reqtype'])
+
+def startup_hook(cfg):
+    """Called at beginning of cron-command, for some initial tasks
+(e.g. start a webserver)"""
+    return post_hook('request_failure', cfg, [])
+
+def exit_hook(cfg):
+    """Called at end of cron command, to do some cleanup"""
+    return post_hook('request_failure', cfg, [])
+
 
 def ensure_config_dns(cfg):
     """make sure that the configuration can be used to update the DNS
@@ -648,6 +671,68 @@ def parse_args():
         action='append',
         help="domain1 keyfile1 certfile1 fullchainfile1 chainfile1 ...",
         )
+
+    parser_invalid_challenge = subparsers.add_parser(
+        'invalid_challenge',
+        help='challenge response has failed [NO-OP]')
+    parser_invalid_challenge.set_defaults(
+        _func=invalid_challenge,
+        _parser=parser_invalid_challenge)
+    parser_invalid_challenge.add_argument(
+        'domain',
+        nargs=1, action='append',
+        help="The primary domain name, i.e. the certificate common name (CN)")
+    parser_invalid_challenge.add_argument(
+        'response',
+        nargs=1, action='append',
+        help="The response that the verification server returned.")
+    parser_invalid_challenge.add_argument(
+        '_extra',
+        nargs='*',
+        metavar='...',
+        action='append',
+        help="domain1 response1 ...",
+        )
+
+    parser_request_failure = subparsers.add_parser(
+        'request_failure',
+        help='challenge response has failed [NO-OP]')
+    parser_request_failure.set_defaults(
+        _func=request_failure,
+        _parser=parser_request_failure)
+    parser_request_failure.add_argument(
+        'statuscode',
+        nargs=1, action='append',
+        help="The HTML status code that originated the error.")
+    parser_request_failure.add_argument(
+        'reason',
+        nargs=1, action='append',
+        help="The specified reason for the error.")
+    parser_request_failure.add_argument(
+        'reqtype',
+        nargs=1, action='append',
+        help="The kind of request that was made (GET, POST...)")
+    parser_request_failure.add_argument(
+        '_extra',
+        nargs='*',
+        metavar='...',
+        action='append',
+        help="statuscode1 reason1 reqtype1 ...",
+        )
+
+    parser_startup_hook = subparsers.add_parser(
+        'startup_hook',
+        help='dehydrated is starting up (do some initial tasks) [NO-OP]')
+    parser_startup_hook.set_defaults(
+        _func=startup_hook,
+        _parser=parser_startup_hook)
+
+    parser_exit_hook = subparsers.add_parser(
+        'exit_hook',
+        help='dehydrated is shutting down (do some final tasks) [NO-OP]')
+    parser_exit_hook.set_defaults(
+        _func=exit_hook,
+        _parser=parser_exit_hook)
 
     args = parser.parse_args()
     try:
