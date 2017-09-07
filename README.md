@@ -10,9 +10,9 @@ This repository contains a python hook for the [dehydrated](https://github.com/l
 Download the files for installation
 
 ``` sh
-  $ git clone https://github.com/lukas2511/dehydrated.git
-  $ mkdir -p dehydrated/hooks/ddns-tsig
-  $ git clone https://github.com/eferdman/dehydrated-hook-ddns-tsig.git dehydrated/hooks/ddns-tsig
+$ git clone https://github.com/lukas2511/dehydrated.git
+$ mkdir -p dehydrated/hooks/ddns-tsig
+$ git clone https://github.com/eferdman/dehydrated-hook-ddns-tsig.git dehydrated/hooks/ddns-tsig
 ```
 
 ## Configuration
@@ -44,7 +44,7 @@ you can provide that information in an extra file.
 The script reads the name of this key file from the environmental variable `DDNS_HOOK_KEY_FILE`
 
 ``` sh
-  $ export DDNS_HOOK_KEY_FILE="path/to/key/file.key"
+$ export DDNS_HOOK_KEY_FILE="path/to/key/file.key"
 ```
 
 The file must be formatted in an [rndc/bind](https://ftp.isc.org/isc/bind9/cur/9.9/doc/arm/man.rndc.conf.html) compatible way.
