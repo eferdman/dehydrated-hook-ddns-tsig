@@ -24,11 +24,15 @@
 #
 ############################################################################
 
-# callbacks
-# deploy_challenge <DOMAIN> <TOKEN_FILENAME> <TOKEN_VALUE>
-# clean_challenge <DOMAIN> <FILENAME> <TOKEN_VALUE>
-# deploy_cert <DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAIN> <CHAINFILE> <TIMESTAMP>
-# unchanged_cert DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAINFILE> <CHAINFILE>
+# callbacks:
+# *deploy_challenge <DOMAIN> <TOKEN_FILENAME> <TOKEN_VALUE>.
+# *clean_challenge <DOMAIN> <FILENAME> <TOKEN_VALUE>.
+# deploy_cert <DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAIN> <CHAINFILE> <TIMESTAMP>.
+# unchanged_cert DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAINFILE> <CHAINFILE>.
+# invalid_challenge <DOMAIN> <RESPONSE>.
+# request_failure <STATUSCODE> <REASON> <REQTYPE>.
+# startup_hook.
+# exit_hook.
 
 
 import os
