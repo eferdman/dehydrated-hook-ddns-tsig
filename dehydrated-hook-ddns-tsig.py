@@ -376,8 +376,8 @@ def clean_challenge(cfg):
 
 
 # callback to deploy the obtained certificate
-# (currently unimplemented)
 def deploy_cert(cfg):
+    """deploy obtained certificates [no-op]"""
     post_hook(
         'deploy_cert', cfg,
         ['domain',
@@ -388,6 +388,7 @@ def deploy_cert(cfg):
 # callback when the certificate has not changed
 # (currently unimplemented)
 def unchanged_cert(cfg):
+    """called when certificated is still valid [no-op]"""
     post_hook(
         'unchanged_cert', cfg,
         ['domain', 'keyfile', 'certfile', 'fullchainfile', 'chainfile'])
@@ -578,7 +579,7 @@ def parse_args():
 
     parser_deploycert = subparsers.add_parser(
         'deploy_cert',
-        help='deploy certificate obtained from ACME (UNIMPLEMENTED)')
+        help='deploy certificate obtained from ACME [NO-OP]')
     parser_deploycert.set_defaults(
         _func=deploy_cert,
         _parser=parser_deploycert)
@@ -616,7 +617,7 @@ def parse_args():
 
     parser_unchangedcert = subparsers.add_parser(
         'unchanged_cert',
-        help='unchanged certificate obtained from ACME (IGNORED)')
+        help='unchanged certificate obtained from ACME [NO-OP]')
     parser_unchangedcert.set_defaults(
         _func=unchanged_cert,
         _parser=parser_unchangedcert)
