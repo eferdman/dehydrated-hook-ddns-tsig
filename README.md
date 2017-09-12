@@ -10,9 +10,9 @@ This repository contains a python hook for the [dehydrated](https://github.com/l
 Download the files for installation
 
 ``` sh
-  $ git clone https://github.com/lukas2511/dehydrated.git
-  $ mkdir -p dehydrated/hooks/ddns-tsig
-  $ git clone https://github.com/eferdman/dehydrated-hook-ddns-tsig.git dehydrated/hooks/ddns-tsig
+$ git clone https://github.com/lukas2511/dehydrated.git
+$ mkdir -p dehydrated/hooks/ddns-tsig
+$ git clone https://github.com/eferdman/dehydrated-hook-ddns-tsig.git dehydrated/hooks/ddns-tsig
 ```
 
 ## Configuration
@@ -34,6 +34,7 @@ The following parameters can be set:
 - `key_name` name of the key to use for authentication with the DNS server (**required**, see [below](#using-an-extra-key-file))
 - `key_secret` the base64-encoded key secret (**required**, see [below](#using-an-extra-key-file))
 - `key_algorithm` the hashing algorithm of the key (default: *hmac-md5*)
+- `dns_rewrite` a regular expression to rewrite the DNS record used to publish the challenge (default: no rewriting)
 
 A complete example can be found in the `dehydrated-hook-ddns-tsig.conf` file.
 
@@ -44,10 +45,18 @@ you can provide that information in an extra file.
 The script reads the name of this key file from the environmental variable `DDNS_HOOK_KEY_FILE`
 
 ``` sh
-  $ export DDNS_HOOK_KEY_FILE="path/to/key/file.key"
+$ export DDNS_HOOK_KEY_FILE="path/to/key/file.key"
 ```
 
-The file must be formatted in an [rndc/bind](https://ftp.isc.org/isc/bind9/cur/9.9/doc/arm/man.rndc.conf.html) compatible way.
+The file must be formatted in an [rndc/bind](https://ftp.isc.org/isc/bind9/cur/9.9/doc/arm/man.rndc.conf.html) compatible way,
+e.g. like:
+
+``` isc
+key "testkey" {
+   secret "R3HI8P6BKw9ZwXwN3VZKuQ==";
+   algorithm = hmac-md5;
+};
+```
 
 Only when using *this* method for acquiring the key,
 you must have [iscpy](https://pypi.python.org/pypi/iscpy) installed.

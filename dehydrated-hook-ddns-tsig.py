@@ -24,13 +24,17 @@
 #
 ############################################################################
 
-# callbacks
-# deploy_challenge <DOMAIN> <TOKEN_FILENAME> <TOKEN_VALUE>
-# clean_challenge <DOMAIN> <FILENAME> <TOKEN_VALUE>
-# deploy_cert <DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAIN> <CHAINFILE> <TIMESTAMP>
-# unchanged_cert DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAINFILE> <CHAINFILE>
+# callbacks:
+# *deploy_challenge <DOMAIN> <TOKEN_FILENAME> <TOKEN_VALUE>.
+# *clean_challenge <DOMAIN> <FILENAME> <TOKEN_VALUE>.
+# deploy_cert <DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAIN> <CHAINFILE> <TSTAMP>.
+# unchanged_cert DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAINFILE> <CHAINFILE>.
+# invalid_challenge <DOMAIN> <RESPONSE>.
+# request_failure <STATUSCODE> <REASON> <REQTYPE>.
+# startup_hook.
+# exit_hook.
 
-
+import re
 import os
 import sys
 import time
@@ -53,6 +57,7 @@ defaults = {
     "ttl": 300,
     "sleep": 5,
     "loglevel": logging.WARN,
+    "dns_rewrite": None,
     }
 # valid key algorithms (but bind9 only supports hmac-md5)
 key_algorithms = {
@@ -89,6 +94,7 @@ def post_hook(name, cfg, args):
             callargs += [cfg[a]]
         logger.info(' + Calling post %s hook: %s' % (name, ' '.join(callargs)))
         subprocess.call(callargs)
+    return
 
 
 def get_key_algo(name='hmac-md5'):
@@ -197,7 +203,9 @@ Return True if the record could be verified, false otherwise.
                       for _ in resolver.query(domain_name, rtype)]
         except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer) as e:
             # probably not there yet...
-            logger.debug("Unable to verify %s record for %s @ %s" % (rtype, domain_name, ns))
+            logger.debug(
+                "Unable to verify %s record for %s @ %s" %
+                (rtype, domain_name, ns))
             if not invert:
                 return False
 
@@ -219,57 +227,80 @@ def create_txt_record(
         keyring, keyalgorithm=dns.tsig.HMAC_MD5,
         ttl=300,
         sleep=5,
-        timeout=10
+        timeout=10,
+        rewrite=None,
         ):
-    logger.info(' + Creating TXT record "%s" for the domain _acme-challenge.%s'
-                % (token, domain_name))
+    domain_name = "_acme-challenge." + domain_name
+    domain_names = []
+    if rewrite:
+        d2 = rewrite(domain_name)
+        if d2 != domain_name:
+            domain_names += [d2]
+    domain_names += [domain_name]
 
-    domain_list = ['_acme-challenge'] + domain_name.split('.')
-    for i in range(1, len(domain_list)):
-        update = dns.update.Update(
-            '.'.join(domain_list[i:]),
-            keyring=keyring,
-            keyalgorithm=keyalgorithm)
-        update.add('.'.join(domain_list[:i]), ttl, 'TXT', token)
-        logger.debug(str(update))
-        try:
-            response = dns.query.udp(update, name_server_ip, timeout=timeout)
-            rcode = response.rcode()
-            logger.debug(" + Adding TXT record %s -> %s returned %s" % (
-                '.'.join(domain_list[:i]),
-                '.'.join(domain_list[i:]),
-                dns.rcode.to_text(rcode)))
-            if rcode is dns.rcode.NOERROR:
-                break
-        except DNSException as err:
-            logger.debug("", exc_info=True)
-            logger.error(err)
+    def _do_create_txt(dn):
+        domain_list = dn.split('.')
+        logger.info(' + Creating TXT record "%s" for the domain %s'
+                    % (token, dn))
+
+        for i in range(1, len(domain_list)):
+            head = '.'.join(domain_list[:i])
+            tail = '.'.join(domain_list[i:])
+            update = dns.update.Update(
+                tail,
+                keyring=keyring,
+                keyalgorithm=keyalgorithm)
+            update.add(head, ttl, 'TXT', token)
+            logger.debug(str(update))
+            try:
+                response = dns.query.udp(
+                    update,
+                    name_server_ip,
+                    timeout=timeout)
+                rcode = response.rcode()
+                logger.debug(" + Creating TXT record %s -> %s returned %s" % (
+                    head, tail,
+                    dns.rcode.to_text(rcode)))
+                if rcode is dns.rcode.NOERROR:
+                    return dn
+            except DNSException as err:
+                logger.debug("", exc_info=True)
+                logger.error(
+                    "Error creating TXT record %s %s: %s" %
+                    (head, tail, err))
+
+    name = None
+    for dn in domain_names:
+        name = _do_create_txt(dn)
+        if name:
+            break
 
     # Wait for DNS record to propagate
-    if (sleep < 0):
-        return
+    if name:
+        if (sleep < 0):
+            return
 
-    microsleep = min(1, sleep/3.)
-    nameservers = query_NS_record('.'.join(domain_list))
-    if not nameservers:
-        nameservers = [name_server_ip]
-    now = time.time()
-    while (time.time() - now < sleep):
-        try:
-            if verify_record('.'.join(domain_list),
-                             nameservers,
-                             rtype='TXT',
-                             rdata=token,
-                             timeout=sleep,
-                             invert=False):
-                logger.info(" + TXT record successfully added!")
-                return
-        except Exception:
-            logger.debug("", exc_info=True)
-            logger.fatal(
-                "Unable to check if TXT record was successfully inserted")
-            sys.exit(1)
-        time.sleep(microsleep)
+        microsleep = min(1, sleep/3.)
+        nameservers = query_NS_record(name)
+        if not nameservers:
+            nameservers = [name_server_ip]
+        now = time.time()
+        while (time.time() - now < sleep):
+            try:
+                if verify_record(name,
+                                 nameservers,
+                                 rtype='TXT',
+                                 rdata=token,
+                                 timeout=sleep,
+                                 invert=False):
+                    logger.info(" + TXT record successfully added!")
+                    return
+            except Exception:
+                logger.debug("", exc_info=True)
+                logger.fatal(
+                    "Unable to check if TXT record was successfully inserted")
+                sys.exit(1)
+            time.sleep(microsleep)
 
     logger.fatal(" + TXT record not added.")
     sys.exit(1)
@@ -282,10 +313,16 @@ def delete_txt_record(
         keyring, keyalgorithm=dns.tsig.HMAC_MD5,
         ttl=300,
         sleep=5,
-        timeout=10
+        timeout=10,
+        rewrite=None,
         ):
-    logger.info(' + Deleting TXT record "%s" for the domain _acme-challenge.%s'
-                % (token, domain_name))
+    domain_name = "_acme-challenge." + domain_name
+    domain_names = []
+    if rewrite:
+        d2 = rewrite(domain_name)
+        if d2 != domain_name:
+            domain_names += [d2]
+    domain_names += [domain_name]
 
     # Retrieve the specific TXT record
     txt_record = dns.rdata.from_text(
@@ -293,53 +330,71 @@ def delete_txt_record(
         dns.rdatatype.TXT,
         token)
 
-    domain_list = ['_acme-challenge'] + domain_name.split('.')
-    for i in range(1, len(domain_list)):
-        # Attempt to delete the TXT record
-        update = dns.update.Update(
-            '.'.join(domain_list[i:]),
-            keyring=keyring,
-            keyalgorithm=keyalgorithm)
-        update.delete('.'.join(domain_list[:i]), txt_record)
-        logger.debug(str(update))
-        try:
-            response = dns.query.udp(update, name_server_ip, timeout=timeout)
-            rcode = response.rcode()
-            logger.debug(" + Removing TXT record %s -> %s returned %s" % (
-                '.'.join(domain_list[:i]),
-                '.'.join(domain_list[i:]),
-                dns.rcode.to_text(rcode)))
-            if rcode is dns.rcode.NOERROR:
-                break
-        except DNSException as err:
-            logger.debug("", exc_info=True)
-            logger.error("Error deleting TXT record")
+    def _do_delete_txt(dn):
+        domain_list = dn.split('.')
+        logger.info(
+            ' + Deleting TXT record "%s" for the domain %s' % (token, dn)
+            )
 
-    # Wait for DNS record to propagate
-    if (sleep < 0):
-        return
+        for i in range(1, len(domain_list)):
+            head = '.'.join(domain_list[:i])
+            tail = '.'.join(domain_list[i:])
+            # Attempt to delete the TXT record
+            update = dns.update.Update(
+                tail,
+                keyring=keyring,
+                keyalgorithm=keyalgorithm)
+            update.delete(head, txt_record)
+            logger.debug(str(update))
+            try:
+                response = dns.query.udp(
+                    update,
+                    name_server_ip,
+                    timeout=timeout)
+                rcode = response.rcode()
+                logger.debug(" + Removing TXT record %s -> %s returned %s" % (
+                    head, tail,
+                    dns.rcode.to_text(rcode)))
+                if rcode is dns.rcode.NOERROR:
+                    return dn
+            except DNSException as err:
+                logger.debug("", exc_info=True)
+                logger.error(
+                    "Error deleting TXT record %s %s: %s" %
+                    (head, tail, err))
 
-    microsleep = min(1, sleep/3.)
-    nameservers = query_NS_record('.'.join(domain_list))
-    if not nameservers:
-        nameservers = [name_server_ip]
-    now = time.time()
-    while (time.time() - now < sleep):
-        try:
-            if verify_record('.'.join(domain_list),
-                             nameservers,
-                             rtype='TXT',
-                             rdata=token,
-                             timeout=sleep,
-                             invert=True):
-                logger.info(" + TXT record successfully deleted!")
-                return
-        except Exception:
-            logger.debug("", exc_info=True)
-            logger.fatal(
-                "Unable to check if TXT record was successfully removed")
-            sys.exit(1)
-        time.sleep(microsleep)
+    name = None
+    for dn in domain_names:
+        name = _do_delete_txt(dn)
+        if name:
+            break
+
+    if (name):
+        # Wait for DNS record to propagate
+        if (sleep < 0):
+            return
+
+        microsleep = min(1, sleep/3.)
+        nameservers = query_NS_record(name)
+        if not nameservers:
+            nameservers = [name_server_ip]
+        now = time.time()
+        while (time.time() - now < sleep):
+            try:
+                if verify_record(name,
+                                 nameservers,
+                                 rtype='TXT',
+                                 rdata=token,
+                                 timeout=sleep,
+                                 invert=True):
+                    logger.info(" + TXT record successfully deleted!")
+                    return
+            except Exception:
+                logger.debug("", exc_info=True)
+                logger.fatal(
+                    "Unable to check if TXT record was successfully removed")
+                sys.exit(1)
+            time.sleep(microsleep)
 
     logger.fatal(" + TXT record not deleted.")
     sys.exit(1)
@@ -354,8 +409,9 @@ def deploy_challenge(cfg):
         cfg["keyring"], cfg["keyalgorithm"],
         ttl=cfg["ttl"],
         sleep=cfg["wait"],
+        rewrite=cfg["dns_rewrite"],
         )
-    post_hook('deploy_challenge', cfg, ['domain', 'tokenfile', 'token'])
+    return post_hook('deploy_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
 
 # callback to clean the challenge from DNS
@@ -367,14 +423,15 @@ def clean_challenge(cfg):
         cfg["keyring"], cfg["keyalgorithm"],
         ttl=cfg["ttl"],
         sleep=cfg["wait"],
+        rewrite=cfg["dns_rewrite"],
         )
-    post_hook('clean_challenge', cfg, ['domain', 'tokenfile', 'token'])
+    return post_hook('clean_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
 
 # callback to deploy the obtained certificate
-# (currently unimplemented)
 def deploy_cert(cfg):
-    post_hook(
+    """deploy obtained certificates [no-op]"""
+    return post_hook(
         'deploy_cert', cfg,
         ['domain',
          'keyfile', 'certfile',
@@ -384,9 +441,58 @@ def deploy_cert(cfg):
 # callback when the certificate has not changed
 # (currently unimplemented)
 def unchanged_cert(cfg):
-    post_hook(
+    """called when certificated is still valid [no-op]"""
+    return post_hook(
         'unchanged_cert', cfg,
         ['domain', 'keyfile', 'certfile', 'fullchainfile', 'chainfile'])
+
+
+# challenge response has failed
+def invalid_challenge(cfg):
+    """challenge response failed [no-op]"""
+    return post_hook(
+        'invalid_challenge', cfg,
+        ['domain', 'response'])
+
+
+# something went wrong when talking to the ACME-server
+def request_failure(cfg):
+    """called when HTTP requests failed (e.g. ACME server is busy [no-op])"""
+    return post_hook(
+        'request_failure', cfg,
+        ['statuscode', 'reason', 'reqtype'])
+
+
+def startup_hook(cfg):
+    """Called at beginning of cron-command, for some initial tasks
+(e.g. start a webserver)"""
+    return post_hook('request_failure', cfg, [])
+
+
+def exit_hook(cfg):
+    """Called at end of cron command, to do some cleanup"""
+    return post_hook('request_failure', cfg, [])
+
+
+def rewriter(sed):
+    if not sed:
+        return None
+    try:
+        cmd, pattern, repl, options = re.split(r'(?<![^\\]\\)/', sed)
+        if cmd != 's':
+            logger.warn(
+                "invalid string-transformation '%s', must be 's/PTRN/REPL/'",
+                sed)
+            return None
+        regex = re.compile(pattern)
+        return lambda s: regex.sub(
+            re.sub(r'\\/', '/', repl),
+            s,
+            count='g' not in options)
+    except Exception as e:
+            logger.debug("", exc_info=True)
+            logger.warn("invalid string-transformation '%s'" % (sed))
+    return
 
 
 def ensure_config_dns(cfg):
@@ -428,6 +534,10 @@ def ensure_config_dns(cfg):
 
     if "name_server_ip" not in cfg:
         cfg["name_server_ip"] = defaults["name_server_ip"]
+
+    cfg["dns_rewrite"] = rewriter(
+        cfg.get("dns_rewrite")
+        or defaults.get("dns_rewrite"))
 
     return cfg
 
@@ -543,7 +653,8 @@ def parse_args():
         nargs='*',
         metavar='...',
         action='append',
-        help="domain1 tokenfile1 token1 ...")
+        help="domain1 tokenfile1 token1 ...",
+        )
 
     parser_cleanchallenge = subparsers.add_parser(
         'clean_challenge',
@@ -568,11 +679,12 @@ def parse_args():
         nargs='*',
         metavar='...',
         action='append',
-        help="domain1 tokenfile1 token1 ...")
+        help="domain1 tokenfile1 token1 ...",
+        )
 
     parser_deploycert = subparsers.add_parser(
         'deploy_cert',
-        help='deploy certificate obtained from ACME (UNIMPLEMENTED)')
+        help='deploy certificate obtained from ACME [NO-OP]')
     parser_deploycert.set_defaults(
         _func=deploy_cert,
         _parser=parser_deploycert)
@@ -600,10 +712,17 @@ def parse_args():
         'timestamp',
         nargs=1, action='append',
         help="time stamp")
+    parser_deploycert.add_argument(
+        '_extra',
+        nargs='*',
+        metavar='...',
+        action='append',
+        help="domain1 keyfile1 certfile1 fullchainfile1 chainfile1 ts1 ...",
+        )
 
     parser_unchangedcert = subparsers.add_parser(
         'unchanged_cert',
-        help='unchanged certificate obtained from ACME (IGNORED)')
+        help='unchanged certificate obtained from ACME [NO-OP]')
     parser_unchangedcert.set_defaults(
         _func=unchanged_cert,
         _parser=parser_unchangedcert)
@@ -627,6 +746,75 @@ def parse_args():
         'chainfile',
         nargs=1, action='append',
         help="certificate chain")
+    parser_unchangedcert.add_argument(
+        '_extra',
+        nargs='*',
+        metavar='...',
+        action='append',
+        help="domain1 keyfile1 certfile1 fullchainfile1 chainfile1 ...",
+        )
+
+    parser_invalid_challenge = subparsers.add_parser(
+        'invalid_challenge',
+        help='challenge response has failed [NO-OP]')
+    parser_invalid_challenge.set_defaults(
+        _func=invalid_challenge,
+        _parser=parser_invalid_challenge)
+    parser_invalid_challenge.add_argument(
+        'domain',
+        nargs=1, action='append',
+        help="The primary domain name, i.e. the certificate common name (CN)")
+    parser_invalid_challenge.add_argument(
+        'response',
+        nargs=1, action='append',
+        help="The response that the verification server returned.")
+    parser_invalid_challenge.add_argument(
+        '_extra',
+        nargs='*',
+        metavar='...',
+        action='append',
+        help="domain1 response1 ...",
+        )
+
+    parser_request_failure = subparsers.add_parser(
+        'request_failure',
+        help='challenge response has failed [NO-OP]')
+    parser_request_failure.set_defaults(
+        _func=request_failure,
+        _parser=parser_request_failure)
+    parser_request_failure.add_argument(
+        'statuscode',
+        nargs=1, action='append',
+        help="The HTML status code that originated the error.")
+    parser_request_failure.add_argument(
+        'reason',
+        nargs=1, action='append',
+        help="The specified reason for the error.")
+    parser_request_failure.add_argument(
+        'reqtype',
+        nargs=1, action='append',
+        help="The kind of request that was made (GET, POST...)")
+    parser_request_failure.add_argument(
+        '_extra',
+        nargs='*',
+        metavar='...',
+        action='append',
+        help="statuscode1 reason1 reqtype1 ...",
+        )
+
+    parser_startup_hook = subparsers.add_parser(
+        'startup_hook',
+        help='dehydrated is starting up (do some initial tasks) [NO-OP]')
+    parser_startup_hook.set_defaults(
+        _func=startup_hook,
+        _parser=parser_startup_hook)
+
+    parser_exit_hook = subparsers.add_parser(
+        'exit_hook',
+        help='dehydrated is shutting down (do some final tasks) [NO-OP]')
+    parser_exit_hook.set_defaults(
+        _func=exit_hook,
+        _parser=parser_exit_hook)
 
     args = parser.parse_args()
     try:
