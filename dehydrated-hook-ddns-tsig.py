@@ -632,6 +632,7 @@ def parse_args():
 
     parser_deploychallenge = subparsers.add_parser(
         'deploy_challenge',
+        prefix_chars='+',
         help='make ACME challenge available via DNS')
     parser_deploychallenge.set_defaults(
         _func=deploy_challenge,
@@ -658,6 +659,7 @@ def parse_args():
 
     parser_cleanchallenge = subparsers.add_parser(
         'clean_challenge',
+        prefix_chars='+',
         help='remove ACME challenge from DNS')
     parser_cleanchallenge.set_defaults(
         _func=clean_challenge,
@@ -684,6 +686,7 @@ def parse_args():
 
     parser_deploycert = subparsers.add_parser(
         'deploy_cert',
+        prefix_chars='+',
         help='deploy certificate obtained from ACME [NO-OP]')
     parser_deploycert.set_defaults(
         _func=deploy_cert,
@@ -722,6 +725,7 @@ def parse_args():
 
     parser_unchangedcert = subparsers.add_parser(
         'unchanged_cert',
+        prefix_chars='+',
         help='unchanged certificate obtained from ACME [NO-OP]')
     parser_unchangedcert.set_defaults(
         _func=unchanged_cert,
@@ -756,6 +760,7 @@ def parse_args():
 
     parser_invalid_challenge = subparsers.add_parser(
         'invalid_challenge',
+        prefix_chars='+',
         help='challenge response has failed [NO-OP]')
     parser_invalid_challenge.set_defaults(
         _func=invalid_challenge,
@@ -778,6 +783,7 @@ def parse_args():
 
     parser_request_failure = subparsers.add_parser(
         'request_failure',
+        prefix_chars='+',
         help='challenge response has failed [NO-OP]')
     parser_request_failure.set_defaults(
         _func=request_failure,
@@ -804,6 +810,7 @@ def parse_args():
 
     parser_startup_hook = subparsers.add_parser(
         'startup_hook',
+        prefix_chars='+',
         help='dehydrated is starting up (do some initial tasks) [NO-OP]')
     parser_startup_hook.set_defaults(
         _func=startup_hook,
@@ -811,6 +818,7 @@ def parse_args():
 
     parser_exit_hook = subparsers.add_parser(
         'exit_hook',
+        prefix_chars='+',
         help='dehydrated is shutting down (do some final tasks) [NO-OP]')
     parser_exit_hook.set_defaults(
         _func=exit_hook,
