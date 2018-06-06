@@ -243,7 +243,7 @@ def create_txt_record(
         logger.info(' + Creating TXT record "%s" for the domain %s'
                     % (token, dn))
 
-        for i in range(1, len(domain_list)):
+        for i in range(0, len(domain_list)):
             head = '.'.join(domain_list[:i])
             tail = '.'.join(domain_list[i:])
             update = dns.update.Update(
@@ -336,7 +336,7 @@ def delete_txt_record(
             ' + Deleting TXT record "%s" for the domain %s' % (token, dn)
             )
 
-        for i in range(1, len(domain_list)):
+        for i in range(0, len(domain_list)):
             head = '.'.join(domain_list[:i])
             tail = '.'.join(domain_list[i:])
             # Attempt to delete the TXT record
