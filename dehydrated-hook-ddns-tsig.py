@@ -39,6 +39,7 @@ import os
 import sys
 import time
 import logging
+import collections
 import dns.resolver
 import dns.tsig
 import dns.tsigkeyring
@@ -628,7 +629,7 @@ def parse_args():
         help="Lower verbosity",
         action='count', default=0)
 
-    subparsers = parser.add_subparsers(help='sub-command help')
+    subparsers = parser.add_subparsers(help='sub-command help', dest='_hook')
 
     parser_deploychallenge = subparsers.add_parser(
         'deploy_challenge',
@@ -824,6 +825,14 @@ def parse_args():
         _func=exit_hook,
         _parser=parser_exit_hook)
 
+    # prepare to ignore unrecognised hooks
+    fallback_parser = argparse.ArgumentParser()
+    fallback_parser.add_argument('_hook_arg', nargs='*')
+    subparsers._name_parser_map = collections.defaultdict(
+        lambda: fallback_parser,
+        subparsers._name_parser_map)
+    subparsers.choices = None
+
     args = parser.parse_args()
     try:
         while(args._extra[0]):
@@ -843,6 +852,12 @@ def parse_args():
     set_verbosity(verbosity)
 
     cfg = read_config(args)
+
+    # ignore unrecognised hooks
+    if not hasattr(args, '_func'):
+        logger.debug("ignoring unknown hook: %s", args._hook)
+        return (lambda cfg: None, cfg)
+
     return (args._func, cfg)
 
 
