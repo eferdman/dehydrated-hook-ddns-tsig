@@ -152,10 +152,13 @@ Return a list of nameserver IPs (might be empty)
     for i in range(0, len(name_list)):
         nameservers = []
         try:
-            for ns in [rdata.target.to_unicode()
-                       for rdata in dns.resolver.query('.'.join(name_list[i:]),
-                                                       'NS')]:
-                nameservers += [_.to_text() for _ in dns.resolver.query(ns)]
+            fqdn = '.'.join(name_list[i:])
+            for rdata in dns.resolver.query(fqdn, dns.rdatatype.NS):
+                ns = rdata.target.to_unicode()
+                nsL = [] 
+                nsL.extend([_.to_text() for _ in dns.resolver.query(ns)]) # default type: A
+                nsL.extend([_.to_text() for _ in dns.resolver.query(ns, rdtype=dns.rdatatype.AAAA)])
+                nameservers.append(nsL)
         except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN) as e:
             continue
         if nameservers:
@@ -197,7 +200,7 @@ Return True if the record could be verified, false otherwise.
                        rtype,
                        rdata if rdata is not None else "*",
                        ns))
-        resolver.nameservers = [ns]
+        resolver.nameservers = ns
         answer = []
         try:
             answer = [_.to_text().strip('"'+"'")
