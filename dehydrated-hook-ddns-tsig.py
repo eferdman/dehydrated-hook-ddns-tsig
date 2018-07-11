@@ -138,9 +138,10 @@ Alternatively set key_name/key_secret in the configuration file""")
 
     # Grab the secret key
     secret = parsed_key_file.values()[0]['secret'].strip('\"')
+    algorithm = parsed_key_file.values()[0]['algorithm'].strip('\"')
     f.close()
 
-    return (key_name, secret)
+    return (key_name, algorithm, secret)
 
 
 def query_NS_record(domain_name):
@@ -505,6 +506,7 @@ def ensure_config_dns(cfg):
 """
     # (str)key_name
     # (str)key_secret
+    # (str)key_algorithm
     # (str)name_server_ip
     # (int)ttl
     # (float)wait
@@ -513,7 +515,7 @@ def ensure_config_dns(cfg):
         key_name = cfg["key_name"]
         key_secret = cfg["key_secret"]
     except KeyError:
-        (key_name, key_secret) = get_isc_key()
+        (key_name, key_algorithm, key_secret) = get_isc_key()
 
     keyringd = {key_name: key_secret}
     keyring = dns.tsigkeyring.from_text(keyringd)
@@ -522,7 +524,7 @@ def ensure_config_dns(cfg):
     try:
         algo = cfg["key_algorithm"]
     except KeyError:
-        algo = ""
+        algo = key_algorithm if key_algorithm else ""
     algo = get_key_algo(algo)
     cfg["keyalgorithm"] = algo
 
