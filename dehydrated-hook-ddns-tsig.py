@@ -511,6 +511,10 @@ def ensure_config_dns(cfg):
     # (int)ttl
     # (float)wait
 
+    key_name = None
+    key_secret = None
+    key_algorithm = None
+
     try:
         key_name = cfg["key_name"]
         key_secret = cfg["key_secret"]
