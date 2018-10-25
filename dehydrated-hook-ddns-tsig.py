@@ -288,7 +288,7 @@ def create_txt_record(
         microsleep = min(1, sleep/3.)
         nameservers = query_NS_record(name)
         if not nameservers:
-            nameservers = [name_server_ip]
+            nameservers = [[name_server_ip]]
         now = time.time()
         while (time.time() - now < sleep):
             try:
@@ -382,7 +382,7 @@ def delete_txt_record(
         microsleep = min(1, sleep/3.)
         nameservers = query_NS_record(name)
         if not nameservers:
-            nameservers = [name_server_ip]
+            nameservers = [[name_server_ip]]
         now = time.time()
         while (time.time() - now < sleep):
             try:
