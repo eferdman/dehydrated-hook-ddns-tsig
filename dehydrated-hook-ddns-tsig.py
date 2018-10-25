@@ -154,12 +154,19 @@ Return a list of nameserver IPs (might be empty)
         nameservers = []
         try:
             fqdn = '.'.join(name_list[i:])
-            for rdata in dns.resolver.query(fqdn, dns.rdatatype.NS):
+            for rdata in dns.resolver.query(fqdn, rdtype=dns.rdatatype.NS):
                 ns = rdata.target.to_unicode()
-                nsL = [] 
-                nsL.extend([_.to_text() for _ in dns.resolver.query(ns)]) # default type: A
-                nsL.extend([_.to_text() for _ in dns.resolver.query(ns, rdtype=dns.rdatatype.AAAA)])
-                nameservers.append(nsL)
+                nsL = []
+                try:
+                    nsL.extend([_.to_text() for _ in dns.resolver.query(ns, rdtype=dns.rdatatype.A)])
+                except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN) as e:
+                    pass
+                try:
+                    nsL.extend([_.to_text() for _ in dns.resolver.query(ns, rdtype=dns.rdatatype.AAAA)])
+                except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN) as e:
+                    pass
+                if nsL:
+                    nameservers.append(nsL)
         except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN) as e:
             continue
         if nameservers:
