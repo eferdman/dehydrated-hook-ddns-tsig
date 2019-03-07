@@ -28,6 +28,7 @@
 # *deploy_challenge <DOMAIN> <TOKEN_FILENAME> <TOKEN_VALUE>.
 # *clean_challenge <DOMAIN> <FILENAME> <TOKEN_VALUE>.
 # deploy_cert <DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAIN> <CHAINFILE> <TSTAMP>.
+# deploy_ocsp <DOMAIN> <OCSPFILE> <TSTAMP>.
 # unchanged_cert DOMAIN> <KEYFILE> <CERTFILE> <FULLCHAINFILE> <CHAINFILE>.
 # invalid_challenge <DOMAIN> <RESPONSE>.
 # request_failure <STATUSCODE> <REASON> <REQTYPE>.
@@ -443,6 +444,15 @@ def deploy_cert(cfg):
          'fullchainfile', 'chainfile', 'timestamp'])
 
 
+# callback to deploy ocsp stapling file
+def deploy_ocsp(cfg):
+    """deploy ocsp stapling file [no-op]"""
+    return post_hook(
+        'deploy_ocsp', cfg,
+        ['domain',
+         'ocspfile', 'timestamp'])
+
+
 # callback when the certificate has not changed
 # (currently unimplemented)
 def unchanged_cert(cfg):
@@ -727,6 +737,33 @@ def parse_args():
         metavar='...',
         action='append',
         help="domain1 keyfile1 certfile1 fullchainfile1 chainfile1 ts1 ...",
+        )
+
+    parser_deployocsp = subparsers.add_parser(
+        'deploy_ocsp',
+        prefix_chars='+',
+        help='deploy OCSP file [NO-OP]')
+    parser_deployocsp.set_defaults(
+        _func=deploy_ocsp,
+        _parser=parser_deployocsp)
+    parser_deployocsp.add_argument(
+        'domain',
+        nargs=1, action='append',
+        help="domain name to deploy ocsp file for")
+    parser_deployocsp.add_argument(
+        'ocspfile',
+        nargs=1, action='append',
+        help="ocsp file")
+    parser_deployocsp.add_argument(
+        'timestamp',
+        nargs=1, action='append',
+        help="time stamp")
+    parser_deployocsp.add_argument(
+        '_extra',
+        nargs='*',
+        metavar='...',
+        action='append',
+        help="domain1 ocspfile1 ts1 ...",
         )
 
     parser_unchangedcert = subparsers.add_parser(
