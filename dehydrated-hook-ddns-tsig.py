@@ -201,7 +201,7 @@ Return True if the record could be verified, false otherwise.
                        rtype,
                        rdata if rdata is not None else "*",
                        ns))
-        resolver.nameservers = ns
+        resolver.nameservers = [ns]
         answer = []
         try:
             answer = [_.to_text().strip('"'+"'")
