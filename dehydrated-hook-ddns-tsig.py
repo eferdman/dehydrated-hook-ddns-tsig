@@ -266,7 +266,7 @@ def create_txt_record(
                 logger.debug(" + Creating TXT record %s -> %s returned %s" % (
                     head, tail,
                     dns.rcode.to_text(rcode)))
-                if rcode is dns.rcode.NOERROR:
+                if rcode == dns.rcode.NOERROR:
                     return dn
             except DNSException as err:
                 logger.debug("", exc_info=True)
@@ -360,7 +360,7 @@ def delete_txt_record(
                 logger.debug(" + Removing TXT record %s -> %s returned %s" % (
                     head, tail,
                     dns.rcode.to_text(rcode)))
-                if rcode is dns.rcode.NOERROR:
+                if rcode == dns.rcode.NOERROR:
                     return dn
             except DNSException as err:
                 logger.debug("", exc_info=True)
