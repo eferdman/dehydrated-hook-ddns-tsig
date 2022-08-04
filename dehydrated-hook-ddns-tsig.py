@@ -55,6 +55,7 @@ defaults = {
         "/usr/local/etc/dehydrated/dehydrated-hook-ddns-tsig.conf",
         "dehydrated-hook-ddns-tsig.conf", ],
     "name_server_ip": '10.0.0.1',
+    "name_server_ip_resolver": '',
     "ttl": 300,
     "sleep": 5,
     "loglevel": logging.WARN,
@@ -144,17 +145,21 @@ Alternatively set key_name/key_secret in the configuration file""")
     return (key_name, algorithm, secret)
 
 
-def query_NS_record(domain_name):
+def query_NS_record(domain_name, name_server_ip_resolver=None):
     """get the nameservers for <name>
 
 Return a list of nameserver IPs (might be empty)
 """
+    resolver = dns.resolver.Resolver(configure=not name_server_ip_resolver)
+    if name_server_ip_resolver:
+        resolver.nameservers = [name_server_ip_resolver]
+
     name_list = domain_name.split('.')
     for i in range(0, len(name_list)):
         nameservers = []
         try:
             fqdn = '.'.join(name_list[i:])
-            for rdata in dns.resolver.query(fqdn, dns.rdatatype.NS):
+            for rdata in resolver.query(fqdn, dns.rdatatype.NS):
                 ns = rdata.target.to_unicode()
                 nsL = [] 
                 nsL.extend([_.to_text() for _ in dns.resolver.query(ns)]) # default type: A
@@ -234,6 +239,7 @@ def create_txt_record(
         sleep=5,
         timeout=10,
         rewrite=None,
+        name_server_ip_resolver=None,
         ):
     domain_name = "_acme-challenge." + domain_name
     domain_names = []
@@ -286,7 +292,7 @@ def create_txt_record(
             return
 
         microsleep = min(1, sleep/3.)
-        nameservers = query_NS_record(name)
+        nameservers = query_NS_record(name, name_server_ip_resolver)
         if not nameservers:
             nameservers = [name_server_ip]
         now = time.time()
@@ -320,6 +326,7 @@ def delete_txt_record(
         sleep=5,
         timeout=10,
         rewrite=None,
+        name_server_ip_resolver=None,
         ):
     domain_name = "_acme-challenge." + domain_name
     domain_names = []
@@ -380,7 +387,7 @@ def delete_txt_record(
             return
 
         microsleep = min(1, sleep/3.)
-        nameservers = query_NS_record(name)
+        nameservers = query_NS_record(name, name_server_ip_resolver)
         if not nameservers:
             nameservers = [name_server_ip]
         now = time.time()
@@ -415,6 +422,7 @@ def deploy_challenge(cfg):
         ttl=cfg["ttl"],
         sleep=cfg["wait"],
         rewrite=cfg["dns_rewrite"],
+        name_server_ip_resolver=cfg["name_server_ip_resolver"],
         )
     return post_hook('deploy_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
@@ -429,6 +437,7 @@ def clean_challenge(cfg):
         ttl=cfg["ttl"],
         sleep=cfg["wait"],
         rewrite=cfg["dns_rewrite"],
+        name_server_ip_resolver=cfg["name_server_ip_resolver"],
         )
     return post_hook('clean_challenge', cfg, ['domain', 'tokenfile', 'token'])
 
@@ -508,6 +517,7 @@ def ensure_config_dns(cfg):
     # (str)key_secret
     # (str)key_algorithm
     # (str)name_server_ip
+    # (str)name_server_ip_resolver
     # (int)ttl
     # (float)wait
 
@@ -540,6 +550,9 @@ def ensure_config_dns(cfg):
 
     if "name_server_ip" not in cfg:
         cfg["name_server_ip"] = defaults["name_server_ip"]
+
+    if "name_server_ip_resolver" not in cfg:
+        cfg["name_server_ip_resolver"] = defaults["name_server_ip_resolver"]
 
     cfg["dns_rewrite"] = rewriter(
         cfg.get("dns_rewrite")
