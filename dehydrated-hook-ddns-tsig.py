@@ -152,7 +152,7 @@ Return a list of nameserver IPs (might be empty)
 """
     resolver = dns.resolver.Resolver(configure=not name_server_ip_resolver)
     if name_server_ip_resolver:
-        resolver.nameservers = [name_server_ip_resolver]
+        resolver.nameservers = [[name_server_ip_resolver]]
 
     name_list = domain_name.split('.')
     for i in range(0, len(name_list)):
